@@ -34,6 +34,8 @@ if (!fs.existsSync(uploadsDir)) {
 app.use(helmet());
 app.use(cors({ origin: '*' })); // Enforces broad local development mapping boundaries
 app.use(express.json());
+// Automatically serve your frontend files (index.html, css, js) from the root folder
+app.use(express.static(path.join(__dirname, '..')));
 app.use(morgan('dev'));
 app.use('/uploads', express.static(uploadsDir));
 
