@@ -252,7 +252,7 @@ app.post('/api/auth/login', async (req, res) => {
 app.post('/api/auth/forgot-password', async (req, res) => {
     const { email } = req.body;
     try {
-        const [users] = await dbPool.execute('SELECT user_id FROM Users WHERE email = ?', [email]);
+        const [users] = await dbPool.execute('SELECT user_id FROM users WHERE email = ?', [email]);
         if (users.length === 0) {
             return res.status(404).json({ success: false, message: 'Email coordinates missing across directories.' });
         }
@@ -272,7 +272,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 
 app.get('/api/patients/departments', async (req, res) => {
     try {
-        const [depts] = await dbPool.execute('SELECT * FROM Departments');
+        const [depts] = await dbPool.execute('SELECT * FROM departments');
         return res.json(depts);
     } catch (err) { return res.status(500).json({ success: false, message: 'Failure auditing departments structural schema.' }); }
 });
@@ -286,14 +286,14 @@ app.get('/api/patients/doctors', async (req, res) => {
 
 app.get('/api/patients/departments/:id/doctors', async (req, res) => {
     try {
-        const [docs] = await dbPool.execute('SELECT doctor_id, full_name, specialization FROM Doctors WHERE department_id = ?', [req.params.id]);
+        const [docs] = await dbPool.execute('SELECT doctor_id, full_name, specialization FROM doctors WHERE department_id = ?', [req.params.id]);
         return res.json(docs);
     } catch (err) { return res.status(500).json({ success: false, message: 'Specialty lookup indexing exception.' }); }
 });
 
 app.get('/api/patients/doctors/:id/schedules', async (req, res) => {
     try {
-        const [sched] = await dbPool.execute('SELECT schedule_id, day_of_week, start_time, end_time FROM Schedules WHERE doctor_id = ? AND is_available = TRUE', [req.params.id]);
+        const [sched] = await dbPool.execute('SELECT schedule_id, day_of_week, start_time, end_time FROM schedules WHERE doctor_id = ? AND is_available = TRUE', [req.params.id]);
         return res.json(sched);
     } catch (err) { return res.status(500).json({ success: false, message: 'Working grids search collision.' }); }
 });
@@ -302,12 +302,12 @@ app.post('/api/appointments/book', authenticateBearerToken, restrictToRoles('Pat
     const { doctor_id, schedule_id, appointment_date, reason_for_visit } = req.body;
 
     try {
-        const [patientData] = await dbPool.execute('SELECT patient_id FROM Patients WHERE user_id = ?', [req.userContext.userId]);
+        const [patientData] = await dbPool.execute('SELECT patient_id FROM patients WHERE user_id = ?', [req.userContext.userId]);
         const patientId = patientData[0].patient_id;
 
         // Concurrency mapping validation: double booking blocker rule enforcement
         const [collisionCheck] = await dbPool.execute(
-            'SELECT appointment_id FROM Appointments WHERE doctor_id = ? AND appointment_date = ? AND schedule_id = ? AND status NOT IN ("Cancelled")',
+            'SELECT appointment_id FROM appointments WHERE doctor_id = ? AND appointment_date = ? AND schedule_id = ? AND status NOT IN ("Cancelled")',
             [doctor_id, appointment_date, schedule_id]
         );
 
@@ -315,7 +315,7 @@ app.post('/api/appointments/book', authenticateBearerToken, restrictToRoles('Pat
             return res.status(409).json({ success: false, message: 'Schedules allocation conflict: The targeted physician block is fully committed for this date coordinate.' });
         }
 
-        const [scheduleBlock] = await dbPool.execute('SELECT start_time FROM Schedules WHERE schedule_id = ?', [schedule_id]);
+        const [scheduleBlock] = await dbPool.execute('SELECT start_time FROM schedules WHERE schedule_id = ?', [schedule_id]);
         const appointmentTime = scheduleBlock[0].start_time;
 
         await dbPool.execute(
@@ -330,7 +330,7 @@ app.post('/api/appointments/book', authenticateBearerToken, restrictToRoles('Pat
 
 app.get('/api/patients/dashboard-metrics', authenticateBearerToken, restrictToRoles('Patient'), async (req, res) => {
     try {
-        const [pData] = await dbPool.execute('SELECT patient_id FROM Patients WHERE user_id = ?', [req.userContext.userId]);
+        const [pData] = await dbPool.execute('SELECT patient_id FROM patients WHERE user_id = ?', [req.userContext.userId]);
         const patientId = pData[0].patient_id;
 
         const [recordsCount] = await dbPool.execute('SELECT COUNT(record_id) as total FROM MedicalRecords mr INNER JOIN Appointments a ON mr.appointment_id = a.appointment_id WHERE a.patient_id = ?', [patientId]);
@@ -351,7 +351,7 @@ app.get('/api/patients/dashboard-metrics', authenticateBearerToken, restrictToRo
 
 app.get('/api/patients/medical-history', authenticateBearerToken, restrictToRoles('Patient'), async (req, res) => {
     try {
-        const [pData] = await dbPool.execute('SELECT patient_id FROM Patients WHERE user_id = ?', [req.userContext.userId]);
+        const [pData] = await dbPool.execute('SELECT patient_id FROM patients WHERE user_id = ?', [req.userContext.userId]);
         const [records] = await dbPool.execute(
             'SELECT mr.record_id, mr.diagnosis, mr.treatment_notes, mr.record_date, p.medication_name, p.dosage, p.instructions FROM MedicalRecords mr INNER JOIN Appointments a ON mr.appointment_id = a.appointment_id LEFT JOIN Prescriptions p ON a.appointment_id = p.appointment_id WHERE a.patient_id = ? ORDER BY mr.record_date DESC',
             [pData[0].patient_id]
@@ -365,11 +365,11 @@ app.get('/api/patients/medical-history', authenticateBearerToken, restrictToRole
 
 app.get('/api/doctors/queue', authenticateBearerToken, restrictToRoles('Doctor'), async (req, res) => {
     try {
-        const [dData] = await dbPool.execute('SELECT doctor_id FROM Doctors WHERE user_id = ?', [req.userContext.userId]);
+        const [dData] = await dbPool.execute('SELECT doctor_id FROM doctors WHERE user_id = ?', [req.userContext.userId]);
         if (dData.length === 0) return res.json([]);
 
         const [queue] = await dbPool.execute(
-            'SELECT a.appointment_id, a.appointment_time, a.status, a.reason_for_visit, p.full_name as patient_name, p.dob, p.gender, p.medical_history_summary FROM Appointments a INNER JOIN Patients p ON a.patient_id = p.patient_id WHERE a.doctor_id = ? AND a.appointment_date = CURDATE() AND a.status IN ("Confirmed", "Checked In") ORDER BY a.appointment_time ASC',
+            'SELECT a.appointment_id, a.appointment_time, a.status, a.reason_for_visit, p.full_name as patient_name, p.dob, p.gender, p.medical_history_summary FROM appointments a INNER JOIN patients p ON a.patient_id = p.patient_id WHERE a.doctor_id = ? AND a.appointment_date = CURDATE() AND a.status IN ("Confirmed", "Checked In") ORDER BY a.appointment_time ASC',
             [dData[0].doctor_id]
         );
         return res.json(queue);
@@ -423,7 +423,7 @@ app.post('/api/doctors/appointments/:id/consultation', authenticateBearerToken, 
 app.get('/api/administrative/appointments', authenticateBearerToken, restrictToRoles('Administrative Staff'), async (req, res) => {
     try {
         const [appointments] = await dbPool.execute(
-            'SELECT a.appointment_id, a.appointment_date, a.appointment_time, a.status, a.reason_for_visit, p.full_name as patient_name, p.phone as patient_phone, d.full_name as doctor_name FROM Appointments a INNER JOIN Patients p ON a.patient_id = p.patient_id INNER JOIN Doctors d ON a.doctor_id = d.doctor_id ORDER BY a.appointment_date DESC, a.appointment_time DESC'
+            'SELECT a.appointment_id, a.appointment_date, a.appointment_time, a.status, a.reason_for_visit, p.full_name as patient_name, p.phone as patient_phone, d.full_name as doctor_name FROM appointments a INNER JOIN patients p ON a.patient_id = p.patient_id INNER JOIN doctors d ON a.doctor_id = d.doctor_id ORDER BY a.appointment_date DESC, a.appointment_time DESC'
         );
         return res.json(appointments);
     } catch (err) { return res.status(500).json({ success: false, message: 'Administrative scheduling queries trace exception.' }); }
@@ -440,8 +440,8 @@ app.patch('/api/appointments/:id/status', authenticateBearerToken, async (req, r
 
         await dbPool.execute('UPDATE Appointments SET status = ? WHERE appointment_id = ?', [status, apptId]);
 
-        const [apptMeta] = await dbPool.execute('SELECT patient_id FROM Appointments WHERE appointment_id = ?', [apptId]);
-        const [patientMeta] = await dbPool.execute('SELECT user_id FROM Patients WHERE patient_id = ?', [apptMeta[0].patient_id]);
+        const [apptMeta] = await dbPool.execute('SELECT patient_id FROM appointments WHERE appointment_id = ?', [apptId]);
+        const [patientMeta] = await dbPool.execute('SELECT user_id FROM patients WHERE patient_id = ?', [apptMeta[0].patient_id]);
         await appendNotificationNode(patientMeta[0].user_id, `Your appointment reference #CC-0${apptId} status configuration was updated to [${status}].`);
 
         await emitAuditLogEvent(req.userContext.userId, `APPOINTMENT_STATUS_MUTATION_#${apptId}_TO_${status}`);
@@ -454,15 +454,15 @@ app.patch('/api/appointments/:id/status', authenticateBearerToken, async (req, r
 
 app.get('/api/manager/reports', authenticateBearerToken, restrictToRoles('Clinic Manager'), async (req, res) => {
     try {
-        const [totalPatients] = await dbPool.execute('SELECT COUNT(patient_id) as count FROM Patients');
-        const [completedAppts] = await dbPool.execute('SELECT COUNT(appointment_id) as count FROM Appointments WHERE status = "Completed"');
-        const [cancelledAppts] = await dbPool.execute('SELECT COUNT(appointment_id) as count FROM Appointments WHERE status = "Cancelled"');
+        const [totalPatients] = await dbPool.execute('SELECT COUNT(patient_id) as count FROM patients');
+        const [completedAppts] = await dbPool.execute('SELECT COUNT(appointment_id) as count FROM appointments WHERE status = "Completed"');
+        const [cancelledAppts] = await dbPool.execute('SELECT COUNT(appointment_id) as count FROM appointments WHERE status = "Cancelled"');
 
         const [utilization] = await dbPool.execute(
-            'SELECT d.full_name as doctor_name, COUNT(a.appointment_id) as encounter_count FROM Doctors d LEFT JOIN Appointments a ON d.doctor_id = a.doctor_id AND a.status = "Completed" GROUP BY d.doctor_id'
+            'SELECT d.full_name as doctor_name, COUNT(a.appointment_id) as encounter_count FROM doctors d LEFT JOIN appointments a ON d.doctor_id = a.doctor_id AND a.status = "Completed" GROUP BY d.doctor_id'
         );
 
-        const [auditLogs] = await dbPool.execute('SELECT log_id, user_id, action_performed, ip_address, timestamp FROM AuditLogs ORDER BY timestamp DESC LIMIT 30');
+        const [auditLogs] = await dbPool.execute('SELECT log_id, user_id, action_performed, ip_address, timestamp FROM auditlogs ORDER BY timestamp DESC LIMIT 30');
 
         return res.json({
             summary: {
@@ -481,11 +481,11 @@ app.get('/api/manager/reports', authenticateBearerToken, restrictToRoles('Clinic
 
 app.get('/api/profile/me', authenticateBearerToken, async (req, res) => {
     try {
-        let sql = 'SELECT user_id, email, role_id FROM Users WHERE user_id = ?';
+        let sql = 'SELECT user_id, email, role_id FROM users WHERE user_id = ?';
         if (req.userContext.role === 'Patient') {
-            sql = 'SELECT u.user_id, u.email, p.full_name, p.phone, p.address, p.medical_history_summary, p.profile_photo_url FROM Users u INNER JOIN Patients p ON u.user_id = p.user_id WHERE u.user_id = ?';
+            sql = 'SELECT u.user_id, u.email, p.full_name, p.phone, p.address, p.medical_history_summary, p.profile_photo_url FROM users u INNER JOIN patients p ON u.user_id = p.user_id WHERE u.user_id = ?';
         } else if (req.userContext.role === 'Doctor') {
-            sql = 'SELECT u.user_id, u.email, d.full_name, d.phone, d.specialization FROM Users u INNER JOIN Doctors d ON u.user_id = d.user_id WHERE u.user_id = ?';
+            sql = 'SELECT u.user_id, u.email, d.full_name, d.phone, d.specialization FROM users u INNER JOIN doctors d ON u.user_id = d.user_id WHERE u.user_id = ?';
         }
 
         const [rows] = await dbPool.execute(sql, [req.userContext.userId]);
