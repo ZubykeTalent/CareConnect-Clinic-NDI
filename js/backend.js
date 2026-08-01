@@ -16,6 +16,7 @@ const { body, validationResult } = require('express-validator');
 require('dotenv').config();
 
 const app = express();
+const PORT = process.env.PORT || 3000;
 const cors = require('cors');
 app.use(cors());
 const DB_PORT = parseInt(process.env.DB_PORT) || 3306;
