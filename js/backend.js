@@ -17,6 +17,8 @@ const { body, validationResult } = require('express-validator');
 require('dotenv').config();
 
 const app = express();
+const cors = require('cors');
+app.use(cors());
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'CARECONNECT_SECURE_COMPLIANCE_TOKEN_CLUSTER_2026';
 
