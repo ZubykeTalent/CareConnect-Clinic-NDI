@@ -48,6 +48,16 @@ const dbPool = mysql.createPool({
     waitForConnections: true,
     connectionLimit: 10
 });
+// DIAGNOSTIC TOOL: Force the server to test the database connection on startup
+dbPool.getConnection((err, connection) => {
+    if (err) {
+        console.error("❌ CLOUD DATABASE CONNECTION CRASHED:", err.message);
+        console.error("❌ ERROR CODE:", err.code);
+    } else {
+        console.log("✅ CLOUD DATABASE CONNECTED SUCCESSFULLY!");
+        connection.release();
+    }
+});
 
 // Configure Multer Engine Instances for Profiling Image Persistences
 const storageConfig = multer.diskStorage({
