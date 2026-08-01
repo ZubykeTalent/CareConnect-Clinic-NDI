@@ -7,7 +7,6 @@ const express = require('express');
 const mysql = require('mysql2/promise');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const multer = require('multer');
@@ -518,10 +517,6 @@ app.get('/api/profile/notifications', authenticateBearerToken, async (req, res) 
         const [rows] = await dbPool.execute('SELECT * FROM Notifications WHERE user_id = ? ORDER BY created_at DESC', [req.userContext.userId]);
         return res.json(rows);
     } catch (err) { return res.status(500).json({ success: false, message: 'Alerts extraction fail.' }); }
-});
-// Root route to verify the deployment is working
-app.get('/', (req, res) => {
-    res.send('🚀 CareConnect Backend Server is Live and Connected to the Cloud Database!');
 });
 
 app.delete('/api/profile/notifications/clear', authenticateBearerToken, async (req, res) => {
