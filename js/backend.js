@@ -39,8 +39,8 @@ app.use('/uploads', express.static(uploadsDir));
 const dbPool = mysql.createPool({
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || 'your_local_password',
-    database: process.env.DB_NAME || 'careconnect_db',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'careconnect',
     port: process.env.DB_PORT || 3306,
     waitForConnections: true,
     connectionLimit: 10
@@ -514,6 +514,10 @@ app.get('/api/profile/notifications', authenticateBearerToken, async (req, res) 
         const [rows] = await dbPool.execute('SELECT * FROM Notifications WHERE user_id = ? ORDER BY created_at DESC', [req.userContext.userId]);
         return res.json(rows);
     } catch (err) { return res.status(500).json({ success: false, message: 'Alerts extraction fail.' }); }
+});
+// Root route to verify the deployment is working
+app.get('/', (req, res) => {
+    res.send('🚀 CareConnect Backend Server is Live and Connected to the Cloud Database!');
 });
 
 app.delete('/api/profile/notifications/clear', authenticateBearerToken, async (req, res) => {

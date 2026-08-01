@@ -3,7 +3,7 @@
    HANDLES: VIEWPORT TOGGLING, MODAL TRANSITIONS, ASYNC REST OPERATIONS, TOASTS
    ========================================================================== */
 
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = 'https://careconnect-backend-0hnf.onrender.com';
 
 // Operational Global Application Context Object State
 let AppState = {
