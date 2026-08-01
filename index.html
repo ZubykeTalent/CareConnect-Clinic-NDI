@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CareConnect Clinic Appointment System</title>
+    <!-- FontAwesome Icons & Google Fonts -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body class="light-theme">
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Global Loading Spinner -->
+    <div id="global-spinner" class="global-spinner hidden">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- MAIN UN-AUTHENTICATED SITE SYSTEM -->
+    <div id="landing-site-wrapper">
+        <!-- Navigation Header -->
+        <header class="main-header">
+            <div class="header-container">
+                <a href="#hero" class="logo-area">
+                    <div class="logo-icon">
+                        <i class="fa-solid :fa-heart-pulse"></i>
+                    </div>
+                    <span class="logo-text">CareConnect</span>
+                </a>
+                <nav class="navbar" id="navbar">
+                    <a href="#about" class="nav-link">About</a>
+                    <a href="#services" class="nav-link">Services</a>
+                    <a href="#departments" class="nav-link">Departments</a>
+                    <a href="#doctors" class="nav-link">Doctors</a>
+                    <a href="#testimonials" class="nav-link">Testimonials</a>
+                    <a href="#faq" class="nav-link">FAQ</a>
+                    <a href="#contact" class="nav-link">Contact</a>
+                    <button class="btn btn-login" id="open-login-btn"><i class="fa-solid fa-user-lock"></i>
+                        Login</button>
+                </nav>
+                <button class="mobile-nav-toggle" id="mobile-toggle" aria-label="Toggle navigation">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Hero Section Section -->
+        <section id="hero" class="hero-section"
+            style="background-image: linear-gradient(to bottom, rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.95)), url('input_file_0.png');">
+            <div class="hero-container">
+                <div class="hero-content">
+                    <span class="badge-premium"><i class="fa-solid fa-shield-halved"></i> Next-Gen Enterprise
+                        Healthcare</span>
+                    <h1 class="hero-title">CareConnect Medical Centre</h1>
+                    <p class="hero-slogan">Better Data. Better Decisions. Better Care.</p>
+                    <p class="hero-description">
+                        Experience a premium, fully automated clinic ecosystem that substitutes manual record management
+                        with clinical precision. Access immediate medical files, streamlined doctor availability, and
+                        real-time electronic prescriptions designed for modern clinical optimization.
+                    </p>
+                    <div class="hero-actions">
+                        <button class="btn btn-primary btn-lg" id="hero-book-btn"><i
+                                class="fa-solid fa-calendar-check"></i> Book Appointment</button>
+                        <a href="#about" class="btn btn-outline btn-lg"><i class="fa-solid fa-circle-info"></i> Learn
+                            More</a>
+                    </div>
+                </div>
+
+                <!-- Quick Metric Trackers -->
+                <div class="hero-stats-grid">
+                    <div class="stat-glass-card">
+                        <div class="stat-icon"><i class="fa-solid fa-user-doctor"></i></div>
+                        <div class="stat-info">
+                            <h3 class="stat-number">24/7</h3>
+                            <p class="stat-label">Doctors Available</p>
+                        </div>
+                    </div>
+                    <div class="stat-glass-card">
+                        <div class="stat-icon"><i class="fa-solid fa-hospital-user"></i></div>
+                        <div class="stat-info">
+                            <h3 class="stat-number">10k+</h3>
+                            <p class="stat-label">Active Patients</p>
+                        </div>
+                    </div>
+                    <div class="stat-glass-card">
+                        <div class="stat-icon"><i class="fa-solid fa-check-to-slot"></i></div>
+                        <div class="stat-info">
+                            <h3 class="stat-number">99.9%</h3>
+                            <p class="stat-label">Appointment Match</p>
+                        </div>
+                    </div>
+                    <div class="stat-glass-card">
+                        <div class="stat-icon"><i class="fa-solid fa-square-h"></i></div>
+                        <div class="stat-info">
+                            <h3 class="stat-number">12+</h3>
+                            <p class="stat-label">Specialist Depts</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="emergency-banner-strip">
+                <div class="banner-container">
+                    <span class="emergency-tag"><i class="fa-solid fa-triangle-exclamation animate-pulse"></i> EMERGENCY
+                        SUPPORT:</span>
+                    <span class="emergency-details">Direct Line: <strong>+234 (0) 812-345-6789</strong> — Available 24
+                        Hours. Professional trauma squads on standby.</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- About Framework Section -->
+        <section id="about" class="about-section section-padding">
+            <div class="section-container">
+                <div class="grid-2col">
+                    <div class="about-image-wrapper">
+                        <div class="experience-badge">
+                            <h3>20+</h3>
+                            <p>Years Enterprise Health Tech Excellence</p>
+                        </div>
+                        <div class="about-decorative-card">
+                            <i class="fa-solid fa-lock-open-text"></i>
+                            <h4>HIPAA Standard Security</h4>
+                            <p>AES-256 state database encryption protocols enforced uniformly.</p>
+                        </div>
+                    </div>
+                    <div class="about-text-content">
+                        <h2 class="section-title-left">Transitioning Healthcare from Filing Cabinets to Cloud Relational
+                            Precision</h2>
+                        <p class="text-lead">Historically, managing patient intakes and schedules with paper folders and
+                            physical logbooks introduced systemic delay metrics, lost history logs, and structural
+                            appointment overlaps.</p>
+                        <p class="text-body">CareConnect completely computerizes internal clinical operations. By
+                            introducing strict 3NF Normalized MySQL persistence layers, real-time doctor grid
+                            synchronization engines, and centralized data distribution models, we decrease lookup delays
+                            from 20 minutes down to microsecond intervals while safeguarding operational medical
+                            continuity.</p>
+                        <div class="features-checklist">
+                            <div class="check-item"><i class="fa-solid fa-circle-check"></i> Integrated Role-Based
+                                Dashboard Architecture</div>
+                            <div class="check-item"><i class="fa-solid fa-circle-check"></i> Automated Real-Time
+                                Double-Booking Collisions Blockers</div>
+                            <div class="check-item"><i class="fa-solid fa-circle-check"></i> End-to-End Electronic
+                                Medical Record (EMR) Transmission</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Services Section -->
+        <section id="services" class="services-section section-padding section-bg-alt">
+            <div class="section-container">
+                <div class="section-header-center">
+                    <h2 class="section-title">Clinical Service Capabilities</h2>
+                    <p class="section-subtitle">Premium electronic operational tiers driving automated healthcare
+                        efficiency.</p>
+                </div>
+                <div class="grid-3col">
+                    <div class="service-card">
+                        <div class="service-icon"><i class="fa-solid fa-calendar-days"></i></div>
+                        <h3>Self-Service Patient Scheduling</h3>
+                        <p>Dynamic access interface for tracking available physician blocks, allowing self-booking,
+                            cancellation processing, and seamless schedule updates.</p>
+                    </div>
+                    <div class="service-card">
+                        <div class="service-icon"><i class="fa-solid fa-file-medical"></i></div>
+                        <h3>Centralized EMR Systems</h3>
+                        <p>Immediate digital access to clinical charts, physiological vitals charts, treatment
+                            summaries, and diagnostic metadata histories.</p>
+                    </div>
+                    <div class="service-card">
+                        <div class="service-icon"><i class="fa-solid fa-prescription-bottle-medical"></i></div>
+                        <h3>Electronic Prescriptions</h3>
+                        <p>Automated, secure transmission routing prescription orders instantly from clinical dashboards
+                            down to fulfillment systems.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Departments Section -->
+        <section id="departments" class="departments-section section-padding">
+            <div class="section-container">
+                <div class="section-header-center">
+                    <h2 class="section-title">Medical Specialties & Departments</h2>
+                    <p class="section-subtitle">Dedicated specialist units managing coordinated diagnostic care
+                        networks.</p>
+                </div>
+                <div class="grid-4col" id="landing-departments-grid">
+                    <!-- Loaded dynamically via JavaScript backend API connection -->
+                    <div class="loading-placeholder-card">Loading Departments System Data...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Doctors Roster Section -->
+        <section id="doctors" class="doctors-section section-padding section-bg-alt">
+            <div class="section-container">
+                <div class="section-header-center">
+                    <h2 class="section-title">Consulting Medical Executives</h2>
+                    <p class="section-subtitle">Highly accredited physicians backed by modern, data-driven system tools.
+                    </p>
+                </div>
+                <div class="grid-4col" id="landing-doctors-grid">
+                    <!-- Loaded dynamically via JavaScript backend API connection -->
+                    <div class="loading-placeholder-card">Loading Medical Officer Profiles...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Testimonials System -->
+        <section id="testimonials" class="testimonials-section section-padding">
+            <div class="section-container">
+                <div class="section-header-center">
+                    <h2 class="section-title">Institutional Feedback Records</h2>
+                    <p class="section-subtitle">Verified feedback from administrators, practitioners, and clinical
+                        patients.</p>
+                </div>
+                <div class="grid-3col">
+                    <div class="testimonial-card">
+                        <div class="stars-row"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i
+                                class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i
+                                class="fa-solid fa-star"></i></div>
+                        <p class="testimonial-text">"The transition from paper ledger logbooks to CareConnect dropped
+                            patient waiting parameters by roughly 85%. Finding historical diagnostics is now
+                            instantaneous."</p>
+                        <div class="testimonial-author">
+                            <div class="author-info">
+                                <h4>Dr. Grace Alao</h4>
+                                <span>Chief Medical Executive</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="testimonial-card">
+                        <div class="stars-row"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i
+                                class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i
+                                class="fa-solid fa-star"></i></div>
+                        <p class="testimonial-text">"Booking an appointment online takes under two minutes. I can see
+                            exactly when my doctor is free without making tedious telephone calls."</p>
+                        <div class="testimonial-author">
+                            <div class="author-info">
+                                <h4>John Obi</h4>
+                                <span>Outpatient Registrant</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="testimonial-card">
+                        <div class="stars-row"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i
+                                class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i
+                                class="fa-solid fa-star"></i></div>
+                        <p class="testimonial-text">"System double-booking conflict tracking is flawless. Admin
+                            operations maintain total schedule tracking and audit clarity."</p>
+                        <div class="testimonial-author">
+                            <div class="author-info">
+                                <h4>Amara Okafor</h4>
+                                <span>Front-Desk Supervisor</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FAQ Framework Section -->
+        <section id="faq" class="faq-section section-padding section-bg-alt">
+            <div class="section-container">
+                <div class="section-header-center">
+                    <h2 class="section-title">Frequently Answered Queries</h2>
+                    <p class="section-subtitle">Technical answers to operational and architectural questions.</p>
+                </div>
+                <div class="faq-accordion-wrapper">
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <h4>Is my clinical health data secured under legal regulatory criteria?</h4>
+                            <span class="faq-toggle-icon"><i class="fa-solid fa-plus"></i></span>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Yes. All Patient Health Information (PHI) processes utilize enterprise-grade AES-256 data
+                                encryption rules at rest, with secure TLS 1.3 encryption standard pipelines enforcing
+                                privacy protection on all active network transits.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <h4>How does the system eliminate calendar double-bookings?</h4>
+                            <span class="faq-toggle-icon"><i class="fa-solid fa-plus"></i></span>
+                        </div>
+                        <div class="faq-answer">
+                            <p>The scheduling backend executes strict multi-concurrency transactional verification
+                                models. When an appointment block is selected, the database sets exclusive transactional
+                                locks to prevent concurrent booking claims on that specific time slice.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact Section -->
+        <section id="contact" class="contact-section section-padding">
+            <div class="section-container">
+                <div class="section-header-center">
+                    <h2 class="section-title">Get In Touch With Us</h2>
+                    <p class="section-subtitle">Reach out to our administrative or technical team for emergency
+                        operational answers.</p>
+                </div>
+                <div class="grid-2col">
+                    <div class="contact-info-cards">
+                        <div class="info-card-item">
+                            <i class="fa-solid fa-map-location-dot"></i>
+                            <div>
+                                <h4>Physical Location Mapping</h4>
+                                <p>CareConnect Complex, Medical Drive, Owerri, Imo State, Nigeria</p>
+                            </div>
+                        </div>
+                        <div class="info-card-item">
+                            <i class="fa-solid fa-envelope-open-text"></i>
+                            <div>
+                                <h4>Digital Mail Exchange</h4>
+                                <p>ops@careconnect.com.ng | secure-health@careconnect.org</p>
+                            </div>
+                        </div>
+                        <div class="info-card-item">
+                            <i class="fa-solid fa-clock"></i>
+                            <div>
+                                <h4>Standard Opening Parameters</h4>
+                                <p>Outpatient Units: 07:00 — 20:00 (Mon-Sat) | Trauma Units: 24/7 Continuous</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="contact-form-wrapper">
+                        <form id="landing-contact-form" class="modern-form">
+                            <div class="form-group">
+                                <label>Full Name Reference</label>
+                                <input type="text" required class="form-control" placeholder="e.g. Chidi Benson">
+                            </div>
+                            <div class="form-group">
+                                <label>Active Digital Email</label>
+                                <input type="email" required class="form-control" placeholder="e.g. benson@domain.com">
+                            </div>
+                            <div class="form-group">
+                                <label>Inquiry Description</label>
+                                <textarea rows="4" required class="form-control"
+                                    placeholder="Detail your operational or systemic request..."></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-block">Transmit Secure Message</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Footer Interface -->
+        <footer class="main-footer">
+            <div class="footer-top">
+                <div class="section-container grid-4col">
+                    <div class="footer-brand-column">
+                        <div class="logo-area">
+                            <div class="logo-icon"><i class="fa-solid fa-heart-pulse"></i></div>
+                            <span class="logo-text">CareConnect</span>
+                        </div>
+                        <p class="footer-text-blurb">Premium clinical orchestration system designed to optimize
+                            out-patient workflow execution, medical recording, and data storage solutions.</p>
+                        <div class="social-links-row">
+                            <a href="#"><i class="fa-brands fa-linkedin"></i></a>
+                            <a href="#"><i class="fa-brands fa-twitter"></i></a>
+                            <a href="#"><i class="fa-brands fa-github"></i></a>
+                        </div>
+                    </div>
+                    <div class="footer-links-column">
+                        <h4>Legal Governance</h4>
+                        <a href="#">Privacy Policy Rules</a>
+                        <a href="#">Terms of System Use</a>
+                        <a href="#">HIPAA Compliance Logs</a>
+                        <a href="#">Data Protection Registry</a>
+                    </div>
+                    <div class="footer-links-column">
+                        <h4>Clinical Operations</h4>
+                        <a href="#services">Services Architecture</a>
+                        <a href="#departments">Specialties Units</a>
+                        <a href="#doctors">Physician Schedules</a>
+                        <a href="#">Emergency Standby Line</a>
+                    </div>
+                    <div class="footer-links-column">
+                        <h4>Contact Registry</h4>
+                        <p><i class="fa-solid fa-phone"></i> +234 (0) 812-345-6789</p>
+                        <p><i class="fa-solid fa-envelope"></i> admin@careconnect.com</p>
+                        <p><i class="fa-solid fa-building-user"></i> Block C, General Hospital Layout</p>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <div class="section-container">
+                    <p>&copy; 2026 CareConnect Medical Centre. Powered and programmed by Nwafor Izuchukwu David. All
+                        Rights
+                        Reserved.</p>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- ONE CONSOLIDATED AUTHENTICATION SYSTEM INTERFACE MODAL -->
+    <div id="auth-modal-overlay" class="modal-overlay hidden">
+        <div class="modal-box glassmorphism animated-fade-in">
+            <button class="modal-close-btn" id="close-auth-modal">&times;</button>
+
+            <!-- Auth Form Card Selector Tabs -->
+            <div class="auth-tabs">
+                <button class="auth-tab-btn active" id="tab-login-trigger">Stakeholder Secure Login</button>
+                <button class="auth-tab-btn" id="tab-register-trigger">Patient Account Sign Up</button>
+            </div>
+
+            <!-- Login Content Pane -->
+            <div id="login-pane" class="auth-pane">
+                <div class="auth-pane-header">
+                    <h3>Welcome Back to CareConnect</h3>
+                    <p>Enter system access credentials. The security engine auto-detects operational routing variables
+                        across Patients, Doctors, Admin Staff, or Management.</p>
+                </div>
+                <form id="system-login-form" class="modern-form">
+                    <div class="form-group">
+                        <label><i class="fa-solid fa-envelope"></i> Registered Email Address</label>
+                        <input type="email" id="login-email" class="form-control" placeholder="yourname@careconnect.com"
+                            required>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fa-solid fa-key"></i> System Access Password</label>
+                        <input type="password" id="login-password" class="form-control" placeholder="••••••••" required>
+                    </div>
+                    <div class="forgot-pwd-row">
+                        <button type="button" class="btn-link-inline" id="trigger-forgot-pwd">Forgot Account
+                            Password?</button>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block"><i class="fa-solid fa-right-to-bracket"></i>
+                        Authenticate System Identity</button>
+                </form>
+            </div>
+
+            <!-- Registration Content Pane (Only Allowed for Patients) -->
+            <div id="register-pane" class="auth-pane hidden">
+                <div class="auth-pane-header">
+                    <h3>Patient Account Sign Up</h3>
+                    <p>Establish a unified out-patient profile node to orchestrate online booking requests instantly.
+                    </p>
+                </div>
+                <form id="patient-registration-form" class="modern-form scrollable-form-container"
+                    enctype="multipart/form-data">
+                    <div class="form-grid-2col">
+                        <div class="form-group">
+                            <label>Full Legal Name</label>
+                            <input type="text" id="reg-name" class="form-control" placeholder="e.g. Gift Nmeri"
+                                required>
+                        </div>
+                        <div class="form-group">
+                            <label>Biological Gender Mapping</label>
+                            <select id="reg-gender" class="form-control" required>
+                                <option value="">Select Gender Alignment</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-grid-2col">
+                        <div class="form-group">
+                            <label>Date of Biological Birth</label>
+                            <input type="date" id="reg-dob" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Active Telephone Line</label>
+                            <input type="tel" id="reg-phone" class="form-control" placeholder="e.g. 08030000000"
+                                required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Active Contact Email Address</label>
+                        <input type="email" id="reg-email" class="form-control" placeholder="gift@domain.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Physical Residential Address</label>
+                        <input type="text" id="reg-address" class="form-control"
+                            placeholder="Street Number, City Layout, State Code" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Emergency Contact Register (Name & Phone Number)</label>
+                        <input type="text" id="reg-emergency" class="form-control"
+                            placeholder="e.g. Mrs. Ogbonna-Okafor (+234 8012345678)" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Medical History Context Summary (Prior Diagnoses, Allergies)</label>
+                        <textarea id="reg-medical-summary" class="form-control" rows="2"
+                            placeholder="Detail chronic conditions, drug reactions, or write 'None'"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Profile Image File Upload</label>
+                        <input type="file" id="reg-photo" class="form-control" accept="image/*">
+                    </div>
+                    <div class="form-grid-2col">
+                        <div class="form-group">
+                            <label>Account Secure Password</label>
+                            <input type="password" id="reg-password" class="form-control"
+                                placeholder="Minimum 8 symbols" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Confirm Account Password</label>
+                            <input type="password" id="reg-confirm-password" class="form-control"
+                                placeholder="Match password token" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block"><i class="fa-solid fa-user-plus"></i>
+                        Finalize Patient Registration</button>
+                </form>
+            </div>
+
+            <!-- Forgot Password Content Pane -->
+            <div id="forgot-password-pane" class="auth-pane hidden">
+                <div class="auth-pane-header">
+                    <h3>Initialize Identity Verification Reset</h3>
+                    <p>Enter the email address registered with your account profiles. The security layer generates and
+                        logs an ephemeral password reset token block.</p>
+                </div>
+                <form id="forgot-password-form" class="modern-form">
+                    <div class="form-group">
+                        <label>Registered Account Email</label>
+                        <input type="email" id="reset-email" class="form-control" placeholder="account@domain.com"
+                            required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Transmit Password Recovery Link</button>
+                    <button type="button" class="btn btn-outline btn-block mt-3" id="back-to-login-btn">Return to
+                        Authentication View</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN DASHBOARD MASTER COMPONENT FRAMEWORK CONTAINER -->
+    <div id="dashboard-app-wrapper" class="dashboard-app-wrapper hidden">
+        <!-- Sidebar Navigation Layout -->
+        <aside class="dashboard-sidebar">
+            <div class="sidebar-brand-area">
+                <div class="logo-icon"><i class="fa-solid fa-heart-pulse"></i></div>
+                <div class="brand-meta">
+                    <span class="brand-title">CareConnect</span>
+                    <span class="system-badge" id="user-role-badge">Role Matrix</span>
+                </div>
+            </div>
+
+            <div class="sidebar-user-profile">
+                <img id="sidebar-avatar"
+                    src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80"
+                    alt="Avatar">
+                <div class="user-meta-info">
+                    <h4 id="sidebar-username">User Core Element</h4>
+                    <span id="sidebar-user-sub">user@careconnect.com</span>
+                </div>
+            </div>
+
+            <!-- Navigation Links Toggled Dynamically via JavaScript Roles Matching -->
+            <nav class="sidebar-navigation" id="sidebar-menu-links">
+                <!-- Links injected programmatically -->
+            </nav>
+
+            <div class="sidebar-footer-controls">
+                <button class="btn-sidebar-control" id="theme-toggle-btn">
+                    <i class="fa-solid fa-moon"></i> <span class="control-label">Toggle Dark UI</span>
+                </button>
+                <button class="btn-sidebar-control btn-logout-action" id="system-logout-btn">
+                    <i class="fa-solid fa-right-from-bracket"></i> <span class="control-label">Terminate Session</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Dashboard Viewport Content Area -->
+        <main class="dashboard-main-content">
+            <!-- Content Header Panel -->
+            <header class="dashboard-top-bar">
+                <div class="top-bar-left">
+                    <button id="sidebar-mobile-toggle" class="sidebar-toggle-btn"><i
+                            class="fa-solid fa-bars-staggered"></i></button>
+                    <h2 id="dashboard-view-title" class="current-view-title">Dashboard Matrix Core Overview</h2>
+                </div>
+                <div class="top-bar-right">
+                    <!-- Notification Bell Component System -->
+                    <div class="notification-dropdown-bell" id="bell-dropdown-wrapper">
+                        <button class="bell-trigger" id="bell-trigger-btn">
+                            <i class="fa-solid fa-bell"></i>
+                            <span class="bell-badge hidden" id="bell-count-badge">0</span>
+                        </button>
+                        <div class="notification-pane glassmorphism hidden" id="notification-pane-box">
+                            <div class="pane-header">
+                                <h4>Transactional Alerts</h4>
+                                <button class="btn-link-inline" id="clear-notifications-btn">Flush Alerts</button>
+                            </div>
+                            <div class="pane-items-list" id="notification-items-list">
+                                <div class="empty-alert-msg">No active security log triggers pending.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dashboard Inner Content Scrolling Area Viewports Container -->
+            <div class="dashboard-viewport-scrollable" id="dashboard-viewports-container">
+
+
+                <!-- ==========================================
+                     STAKEHOLDER 1: PATIENT PLATFORM VIEWPORTS
+                     ========================================== -->
+                <div id="viewport-patient-home" class="dashboard-viewport hidden">
+                    <div class="welcome-banner-gradient">
+                        <div class="banner-text">
+                            <h3>Welcome to Your Health Center Engine, <span class="patient-name-span">Patient</span>!
+                            </h3>
+                            <p>Orchestrate scheduled doctor visits, view continuous operational logs, track updates, and
+                                download authorized medical diagnostic cards seamlessly.</p>
+                        </div>
+                    </div>
+
+                    <div class="grid-3col metric-cards-strip">
+                        <div class="metric-card glassmorphism">
+                            <div class="m-icon bg-primary-light"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                            <div class="m-data">
+                                <h3>Next Appointment</h3>
+                                <p id="p-metric-next">No record loaded</p>
+                            </div>
+                        </div>
+                        <div class="metric-card glassmorphism">
+                            <div class="m-icon bg-success-light"><i class="fa-solid fa-file-medical"></i></div>
+                            <div class="m-data">
+                                <h3>Medical Records</h3>
+                                <p id="p-metric-records">0 Total Nodes</p>
+                            </div>
+                        </div>
+                        <div class="metric-card glassmorphism">
+                            <div class="m-icon bg-warning-light"><i class="fa-solid fa-prescription"></i></div>
+                            <div class="m-data">
+                                <h3>Active Prescriptions</h3>
+                                <p id="p-metric-prescriptions">0 Prescribed Items</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-layout-main-grid">
+                        <div class="grid-column-left">
+                            <div class="content-block-card glassmorphism">
+                                <div class="block-header-row">
+                                    <h3>Upcoming Appointment Blocks</h3>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="premium-data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Appointment ID</th>
+                                                <th>Doctor Officer</th>
+                                                <th>Date Mapping</th>
+                                                <th>Target Time</th>
+                                                <th>Status Indicator</th>
+                                                <th>Control Controls</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="patient-upcoming-table-body">
+                                            <tr>
+                                                <td colspan="6" class="text-center">No structural logs parsed.</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="viewport-patient-book" class="dashboard-viewport hidden">
+                    <div class="content-block-card glassmorphism max-width-800">
+                        <h3>Secure Appointment Slot Engine Booking</h3>
+                        <p class="description-text">Select your destination operational department, matching consulting
+                            medical executive, and authorized time block configuration.</p>
+                        <form id="patient-appointment-booking-form" class="modern-form mt-4">
+                            <div class="form-group">
+                                <label>Target Department Unit</label>
+                                <select id="booking-department-select" class="form-control" required>
+                                    <option value="">Query Department Matrix Data...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Assigned Consulting Doctor Profile</label>
+                                <select id="booking-doctor-select" class="form-control" required disabled>
+                                    <option value="">Select target department entity first...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Available Physician Working Schedule Matrix Blocks</label>
+                                <select id="booking-schedule-select" class="form-control" required disabled>
+                                    <option value="">Select specific physician context...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Target Calendar Execution Date</label>
+                                <input type="date" id="booking-date-input" class="form-control" required disabled>
+                            </div>
+                            <div class="form-group">
+                                <label>Primary Reason for Visit Context Identification</label>
+                                <textarea id="booking-reason-input" class="form-control" rows="3"
+                                    placeholder="Provide diagnostic symptoms context indicators..." required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-block" id="submit-booking-btn"
+                                disabled>Confirm Encrypted Appointment Log Allocation</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div id="viewport-patient-history" class="dashboard-viewport hidden">
+                    <div class="content-block-card glassmorphism">
+                        <h3>Comprehensive Structural Treatment Records</h3>
+                        <p class="description-text">Archived repository containing system clinical notes, physical
+                            triage vitals, diagnostics indices, and digital prescriptions.</p>
+                        <div class="search-filter-strip mt-3">
+                            <input type="text" id="patient-record-search" class="form-control filter-input"
+                                placeholder="Query historical diagnosis codes...">
+                        </div>
+                        <div class="records-cards-stack-layout mt-4" id="patient-medical-records-stack">
+                            <!-- Injected dynamically via API -->
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- ==========================================
+                     STAKEHOLDER 2: DOCTOR CLINICAL MODULE VIEWPORTS
+                     ========================================== -->
+                <div id="viewport-doctor-home" class="dashboard-viewport hidden">
+                    <div class="welcome-banner-gradient variant-doctor">
+                        <div class="banner-text">
+                            <h3>Clinical Framework Terminal: <span id="doctor-title-span">Doctor</span></h3>
+                            <p>Access active daily consultation queues, input rapid triage notes, append structured
+                                prescriptions, and audit execution histories dynamically.</p>
+                        </div>
+                    </div>
+
+                    <div class="grid-2col dashboard-layout-main-grid mt-4">
+                        <div class="content-block-card glassmorphism">
+                            <h3>Today's Scheduled Consultations Queue</h3>
+                            <div class="table-responsive mt-3">
+                                <table class="premium-data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Patient Context</th>
+                                            <th>Time Allocation</th>
+                                            <th>Reason Details</th>
+                                            <th>State</th>
+                                            <th>Operations Control</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="doctor-queue-table-body">
+                                        <tr>
+                                            <td colspan="5" class="text-center">No outpatients logged in queue
+                                                frameworks.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="content-block-card glassmorphism" id="doctor-consultation-workspace">
+                            <h3>Active Live Consultation Interface Workspace</h3>
+                            <p class="text-muted-compact">Select a patient allocation row from the queue grid matrix to
+                                launch active clinical recording blocks.</p>
+
+                            <div id="consultation-active-fields" class="hidden mt-3">
+                                <div class="patient-summary-banner-mini">
+                                    <h4 id="consult-patient-name">Patient Element</h4>
+                                    <p>DOB: <span id="consult-patient-dob">N/A</span> | Gender: <span
+                                            id="consult-patient-gender">N/A</span></p>
+                                    <blockquote id="consult-patient-history-summary" class="mini-medical-history-quote">
+                                    </blockquote>
+                                </div>
+                                <form id="doctor-consultation-submission-form" class="modern-form mt-3">
+                                    <input type="hidden" id="consult-appointment-id">
+                                    <div class="form-group">
+                                        <label>Structured Diagnostics Code / Identification Verdict</label>
+                                        <input type="text" id="consult-diagnosis" class="form-control"
+                                            placeholder="e.g. Essential Hypertension (Stage I)" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Comprehensive Clinical Progress & Treatment Formulation Notes</label>
+                                        <textarea id="consult-notes" class="form-control" rows="4"
+                                            placeholder="Enter detailed triage tracking records..." required></textarea>
+                                    </div>
+
+                                    <div class="prescription-builder-container-card">
+                                        <h5><i class="fa-solid fa-pills"></i> Attach Linked Electronic Prescription Item
+                                        </h5>
+                                        <div class="form-group mt-2">
+                                            <label>Medication Chemical Formulation Name</label>
+                                            <input type="text" id="consult-med-name" class="form-control"
+                                                placeholder="e.g. Amlodipine 5mg">
+                                        </div>
+                                        <div class="form-grid-2col">
+                                            <div class="form-group">
+                                                <label>Dosage Metric Configuration</label>
+                                                <input type="text" id="consult-med-dosage" class="form-control"
+                                                    placeholder="e.g. 1 Tablet Daily">
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Explicit Intake / Dispensing Mandate Instructions</label>
+                                                <input type="text" id="consult-med-instructions" class="form-control"
+                                                    placeholder="e.g. Post-prandial administration for 30 days">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <button type="submit" class="btn btn-success btn-block mt-3"><i
+                                            class="fa-solid fa-file-shield"></i> Commit Diagnostic Encrypted Record &
+                                        Close Session</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- ==========================================
+                     STAKEHOLDER 3: ADMINISTRATIVE FRONT-DESK PORTAL
+                     ========================================== -->
+                <!-- CHANGE THIS LINE (Line 907): -->
+                <div id="viewport-administrativestaff-home" class="dashboard-viewport hidden">
+                    <div class="content-block-card glassmorphism">
+                        <div class="block-header-row">
+                            <div>
+                                <h3>Central Outpatient Scheduling Management Terminal</h3>
+                                <p class="description-text">Authorize pending booking requests, assign emergency medical
+                                    consult allocations, and adjust daily clinic queue variables.</p>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive mt-4">
+                            <table class="premium-data-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Patient Registrant</th>
+                                        <th>Physician Entity</th>
+                                        <th>Date/Time Allocations</th>
+                                        <th>Reason Payload</th>
+                                        <th>Current Matrix State</th>
+                                        <th>Execution Operations Matrix</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-appointments-master-table-body">
+                                    <tr>
+                                        <td colspan="7" class="text-center">No scheduling records compiled across system
+                                            instances.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- ==========================================
+                     STAKEHOLDER 4: CLINIC MANAGER MANAGEMENT DASHBOARD
+                     ========================================== -->
+                <!-- CHANGE THIS LINE (Line 945): -->
+                <div id="viewport-clinicmanager-home" class="dashboard-viewport hidden">
+                    <div class="grid-4col metric-cards-strip">
+                        <div class="metric-card glassmorphism">
+                            <div class="m-icon color-blue"><i class="fa-solid fa-users"></i></div>
+                            <div class="m-data">
+                                <h3 id="m-stat-patients">0</h3>
+                                <p>Patients Registered</p>
+                            </div>
+                        </div>
+                        <div class="metric-card glassmorphism">
+                            <div class="m-icon color-green"><i class="fa-solid fa-calendar-check"></i></div>
+                            <div class="m-data">
+                                <h3 id="m-stat-completed">0</h3>
+                                <p>Completed Encounters</p>
+                            </div>
+                        </div>
+                        <div class="metric-card glassmorphism">
+                            <div class="m-icon color-red"><i class="fa-solid fa-calendar-xmark"></i></div>
+                            <div class="m-data">
+                                <h3 id="m-stat-cancelled">0</h3>
+                                <p>Cancelled Sessions</p>
+                            </div>
+                        </div>
+                        <div class="metric-card glassmorphism">
+                            <div class="m-icon color-gold"><i class="fa-solid fa-wave-square"></i></div>
+                            <div class="m-data">
+                                <h3>99.9%</h3>
+                                <p>System Cluster Health</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid-2col dashboard-layout-main-grid mt-4">
+                        <div class="content-block-card glassmorphism">
+                            <h3>Analytics Engine: Doctor Service Utilization Metrics</h3>
+                            <p class="description-text">Consolidated utilization index mapping completed diagnostic
+                                appointment matrices against employee allocation limits.</p>
+
+                            <!-- Pure Custom SVG/HTML Chart Framework Component -->
+                            <div class="custom-analytics-chart-container" id="manager-chart-bars-container">
+                                <!-- Bars rendered programmatically by the UI execution logic -->
+                            </div>
+                        </div>
+
+                        <div class="content-block-card glassmorphism">
+                            <h3>System Administration Operations & Execution Exports</h3>
+                            <p class="description-text">Trigger enterprise data extractions or pipeline diagnostic
+                                commands.</p>
+                            <div class="management-buttons-stack mt-4">
+                                <button class="btn btn-outline btn-lg" id="manager-export-pdf-btn"><i
+                                        class="fa-solid fa-file-pdf"></i> Compile Comprehensive Clinical Activity
+                                    Summary (PDF-Print Template)</button>
+                                <button class="btn btn-outline btn-lg" id="manager-system-audit-btn"><i
+                                        class="fa-solid fa-terminal"></i> Query System Cryptographic Audit Tracking Data
+                                    Stream</button>
+                            </div>
+
+                            <div class="audit-stream-shell-output hidden mt-3" id="manager-audit-shell">
+                                <h6>[SYSTEM INTEGRITY SECURITY MONITOR OUTPUT LOG]</h6>
+                                <pre id="audit-log-pre-block">Awaiting analytical inspection request parameters...</pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- ==========================================
+                     COMMON PANE MODULES: PROFILE & SETTINGS
+                     ========================================== -->
+                <div id="viewport-common-profile" class="dashboard-viewport hidden">
+                    <div class="content-block-card glassmorphism max-width-800">
+                        <h3>Modify Personal System Profile Data</h3>
+                        <form id="common-profile-update-form" class="modern-form mt-3">
+                            <div class="form-group">
+                                <label>Full Verified Legal Name</label>
+                                <input type="text" id="prof-name" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Digital Communication Email (Primary Identity Token)</label>
+                                <input type="email" id="prof-email" class="form-control" readonly disabled>
+                                <small class="text-muted-compact">Email mutation configurations require higher root
+                                    system administrator override validations.</small>
+                            </div>
+                            <div class="form-group">
+                                <label>Active Direct Telephone Contact Line</label>
+                                <input type="tel" id="prof-phone" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Physical Residential Coordinate Address</label>
+                                <input type="text" id="prof-address" class="form-control" required>
+                            </div>
+                            <div class="form-group" id="prof-medical-history-group">
+                                <label>Medical History Context Summary (Read-Only Archive Container)</label>
+                                <textarea id="prof-medical-summary" class="form-control" rows="3" readonly
+                                    disabled></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Commit Dynamic Data Profile Changes</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div id="viewport-common-settings" class="dashboard-viewport hidden">
+                    <div class="content-block-card glassmorphism max-width-800">
+                        <h3>System Configuration & Settings Layout</h3>
+                        <p class="description-text">Manage regional time constraints, dark user interface tracking
+                            parameters, and local data nodes configuration.</p>
+                        <hr class="divider-line">
+                        <div class="setting-toggle-row mt-3">
+                            <div>
+                                <h4>High Concurrency Dark Interface Layout</h4>
+                                <p class="text-muted-compact">Converts high luminance viewport components to low
+                                    radiation dark pixels.</p>
+                            </div>
+                            <label class="switch-toggle-component">
+                                <input type="checkbox" id="settings-dark-mode-checkbox">
+                                <span class="slider-round-element"></span>
+                            </label>
+                        </div>
+                        <hr class="divider-line">
+                        <div class="setting-toggle-row">
+                            <div>
+                                <h4>Transactional Alerts Dispatch Engine</h4>
+                                <p class="text-muted-compact">Routes SMS and automated system background dispatches for
+                                    diagnostic event updates.</p>
+                            </div>
+                            <label class="switch-toggle-component">
+                                <input type="checkbox" checked disabled>
+                                <span class="slider-round-element"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Core Frontend Operational Script Bundle Loader -->
+    <script src="js/frontend.js"></script>
+</body>
+
+</html>
