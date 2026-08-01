@@ -83,7 +83,7 @@ async function authenticateBearerToken(req, res, next) {
 
         // Confirm Session validity criteria inside database structures
         const [session] = await dbPool.execute(
-            'SELECT session_id FROM Sessions WHERE user_id = ? AND token = ? AND expires_at > NOW()',
+            'SELECT session_id FROM sessions WHERE user_id = ? AND token = ? AND expires_at > NOW()',
             [decryptedPayload.userId, token]
         );
 
@@ -154,12 +154,12 @@ app.post('/api/auth/register-patient', uploadEngine.single('photo'), [
         await dbConnection.beginTransaction();
 
         // 3NF Deduplication checks
-        const [duplicateEmail] = await dbConnection.execute('SELECT user_id FROM Users WHERE email = ?', [email]);
+        const [duplicateEmail] = await dbConnection.execute('SELECT user_id FROM users WHERE email = ?', [email]);
         if (duplicateEmail.length > 0) {
             throw new Error('Identity conflict: Email registry intersection.');
         }
 
-        const [duplicatePhone] = await dbConnection.execute('SELECT patient_id FROM Patients WHERE phone = ?', [phone]);
+        const [duplicatePhone] = await dbConnection.execute('SELECT patient_id FROM patients WHERE phone = ?', [phone]);
         if (duplicatePhone.length > 0) {
             throw new Error('Identity conflict: Phone matching node collision.');
         }
@@ -168,14 +168,14 @@ app.post('/api/auth/register-patient', uploadEngine.single('photo'), [
 
         // Core Users insert mapping Patient Role
         const [userResult] = await dbConnection.execute(
-            'INSERT INTO Users (email, password_hash, role_id) VALUES (?, ?, (SELECT role_id FROM Roles WHERE role_name = "Patient"))',
+            'INSERT INTO users (email, password_hash, role_id) VALUES (?, ?, (SELECT role_id FROM roles WHERE role_name = "Patient"))',
             [email, passwordHash]
         );
         const generatedUserId = userResult.insertId;
 
         // Core Patients profile table linking
         await dbConnection.execute(
-            'INSERT INTO Patients (user_id, full_name, dob, gender, phone, email, address, emergency_contact, profile_photo_url, medical_history_summary) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO patients (user_id, full_name, dob, gender, phone, email, address, emergency_contact, profile_photo_url, medical_history_summary) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [generatedUserId, full_name, dob, gender, phone, email, address, emergency_contact, profilePhotoPath, medical_history_summary]
         );
 
@@ -195,7 +195,7 @@ app.post('/api/auth/login', async (req, res) => {
     const { email, password } = req.body;
     try {
         const [users] = await dbPool.execute(
-            'SELECT u.user_id, u.email, u.password_hash, r.role_name FROM Users u INNER JOIN Roles r ON u.role_id = r.role_id WHERE u.email = ?',
+            'SELECT u.user_id, u.email, u.password_hash, r.role_name FROM users u INNER JOIN roles r ON u.role_id = r.role_id WHERE u.email = ?',
             [email]
         );
 
@@ -219,10 +219,10 @@ app.post('/api/auth/login', async (req, res) => {
         // Gather Profile-Specific Hydrated naming variables based on active context
         let personalName = 'System Executive Node';
         if (user.role_name === 'Patient') {
-            const [p] = await dbPool.execute('SELECT full_name FROM Patients WHERE user_id = ?', [user.user_id]);
+            const [p] = await dbPool.execute('SELECT full_name FROM patients WHERE user_id = ?', [user.user_id]);
             if (p.length > 0) personalName = p[0].full_name;
         } else if (user.role_name === 'Doctor') {
-            const [d] = await dbPool.execute('SELECT full_name FROM Doctors WHERE user_id = ?', [user.user_id]);
+            const [d] = await dbPool.execute('SELECT full_name FROM doctors WHERE user_id = ?', [user.user_id]);
             if (d.length > 0) personalName = d[0].full_name;
         }
 
@@ -234,7 +234,7 @@ app.post('/api/auth/login', async (req, res) => {
 
         // Session block tracking mapping compliance constraints
         await dbPool.execute(
-            'INSERT INTO Sessions (user_id, token, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 8 HOUR))',
+            'INSERT INTO sessions (user_id, token, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 8 HOUR))',
             [user.user_id, sessionToken]
         );
 
@@ -259,7 +259,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 
         const transientToken = `RST-${Math.floor(100000 + Math.random() * 900000)}`;
         await dbPool.execute(
-            'INSERT INTO PasswordResetTokens (user_id, token, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 1 HOUR))',
+            'INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 1 HOUR))',
             [users[0].user_id, transientToken]
         );
 
@@ -279,7 +279,7 @@ app.get('/api/patients/departments', async (req, res) => {
 
 app.get('/api/patients/doctors', async (req, res) => {
     try {
-        const [docs] = await dbPool.execute('SELECT doctor_id, full_name, specialization, qualification, department_id FROM Doctors');
+        const [docs] = await dbPool.execute('SELECT doctor_id, full_name, specialization, qualification, department_id FROM doctors');
         return res.json(docs);
     } catch (err) { return res.status(500).json({ success: false, message: 'Failure processing clinical rosters.' }); }
 });
@@ -319,7 +319,7 @@ app.post('/api/appointments/book', authenticateBearerToken, restrictToRoles('Pat
         const appointmentTime = scheduleBlock[0].start_time;
 
         await dbPool.execute(
-            'INSERT INTO Appointments (patient_id, doctor_id, schedule_id, appointment_date, appointment_time, status, reason_for_visit) VALUES (?, ?, ?, ?, ?, "Pending", ?)',
+            'INSERT INTO appointments (patient_id, doctor_id, schedule_id, appointment_date, appointment_time, status, reason_for_visit) VALUES (?, ?, ?, ?, ?, "Pending", ?)',
             [patientId, doctor_id, schedule_id, appointment_date, appointmentTime, reason_for_visit]
         );
 
@@ -333,12 +333,12 @@ app.get('/api/patients/dashboard-metrics', authenticateBearerToken, restrictToRo
         const [pData] = await dbPool.execute('SELECT patient_id FROM patients WHERE user_id = ?', [req.userContext.userId]);
         const patientId = pData[0].patient_id;
 
-        const [recordsCount] = await dbPool.execute('SELECT COUNT(record_id) as total FROM MedicalRecords mr INNER JOIN Appointments a ON mr.appointment_id = a.appointment_id WHERE a.patient_id = ?', [patientId]);
-        const [prescCount] = await dbPool.execute('SELECT COUNT(prescription_id) as total FROM Prescriptions p INNER JOIN Appointments a ON p.appointment_id = a.appointment_id WHERE a.patient_id = ?', [patientId]);
+        const [recordsCount] = await dbPool.execute('SELECT COUNT(record_id) as total FROM medicalrecords mr INNER JOIN appointments a ON mr.appointment_id = a.appointment_id WHERE a.patient_id = ?', [patientId]);
+        const [prescCount] = await dbPool.execute('SELECT COUNT(prescription_id) as total FROM prescriptions p INNER JOIN appointments a ON p.appointment_id = a.appointment_id WHERE a.patient_id = ?', [patientId]);
 
 
         const [upcoming] = await dbPool.execute(
-            'SELECT a.appointment_id, DATE_FORMAT(a.appointment_date, "%Y-%m-%d") AS appointment_date, a.appointment_time, a.status, d.full_name as doctor_name, d.specialization FROM Appointments a INNER JOIN Doctors d ON a.doctor_id = d.doctor_id WHERE a.patient_id = ? AND a.status IN ("Pending","Confirmed","Checked In") ORDER BY a.appointment_date ASC, a.appointment_time ASC',
+            'SELECT a.appointment_id, DATE_FORMAT(a.appointment_date, "%Y-%m-%d") AS appointment_date, a.appointment_time, a.status, d.full_name as doctor_name, d.specialization FROM appointments a INNER JOIN doctors d ON a.doctor_id = d.doctor_id WHERE a.patient_id = ? AND a.status IN ("Pending","Confirmed","Checked In") ORDER BY a.appointment_date ASC, a.appointment_time ASC',
             [patientId]
         );
 
@@ -353,7 +353,7 @@ app.get('/api/patients/medical-history', authenticateBearerToken, restrictToRole
     try {
         const [pData] = await dbPool.execute('SELECT patient_id FROM patients WHERE user_id = ?', [req.userContext.userId]);
         const [records] = await dbPool.execute(
-            'SELECT mr.record_id, mr.diagnosis, mr.treatment_notes, mr.record_date, p.medication_name, p.dosage, p.instructions FROM MedicalRecords mr INNER JOIN Appointments a ON mr.appointment_id = a.appointment_id LEFT JOIN Prescriptions p ON a.appointment_id = p.appointment_id WHERE a.patient_id = ? ORDER BY mr.record_date DESC',
+            'SELECT mr.record_id, mr.diagnosis, mr.treatment_notes, mr.record_date, p.medication_name, p.dosage, p.instructions FROM medicalrecords mr INNER JOIN appointments a ON mr.appointment_id = a.appointment_id LEFT JOIN prescriptions p ON a.appointment_id = p.appointment_id WHERE a.patient_id = ? ORDER BY mr.record_date DESC',
             [pData[0].patient_id]
         );
         return res.json(records);
@@ -386,24 +386,24 @@ app.post('/api/doctors/appointments/:id/consultation', authenticateBearerToken, 
 
         // Write EMR row node
         await dbConnection.execute(
-            'INSERT INTO MedicalRecords (appointment_id, diagnosis, treatment_notes, record_date) VALUES (?, ?, ?, CURDATE())',
+            'INSERT INTO medicalrecords (appointment_id, diagnosis, treatment_notes, record_date) VALUES (?, ?, ?, CURDATE())',
             [apptId, diagnosis, treatment_notes]
         );
 
         // Map prescription structural entry items if passed by physician logic
         if (medication_name && medication_name.trim() !== '') {
             await dbConnection.execute(
-                'INSERT INTO Prescriptions (appointment_id, medication_name, dosage, instructions, prescribed_date) VALUES (?, ?, ?, ?, CURDATE())',
+                'INSERT INTO prescriptions (appointment_id, medication_name, dosage, instructions, prescribed_date) VALUES (?, ?, ?, ?, CURDATE())',
                 [apptId, medication_name, dosage, instructions]
             );
         }
 
         // Mutate status block container parameters down to Completed tier
-        await dbConnection.execute('UPDATE Appointments SET status = "Completed" WHERE appointment_id = ?', [apptId]);
+        await dbConnection.execute('UPDATE appointments SET status = "Completed" WHERE appointment_id = ?', [apptId]);
 
         // Send confirmation trigger alerting the outpatient node
-        const [apptMeta] = await dbConnection.execute('SELECT patient_id FROM Appointments WHERE appointment_id = ?', [apptId]);
-        const [patientMeta] = await dbConnection.execute('SELECT user_id FROM Patients WHERE patient_id = ?', [apptMeta[0].patient_id]);
+        const [apptMeta] = await dbConnection.execute('SELECT patient_id FROM appointments WHERE appointment_id = ?', [apptId]);
+        const [patientMeta] = await dbConnection.execute('SELECT user_id FROM patients WHERE patient_id = ?', [apptMeta[0].patient_id]);
         await appendNotificationNode(patientMeta[0].user_id, `Consultation session complete. Diagnosis logged: "${diagnosis}". Treatment files archived.`);
 
         await dbConnection.commit();
@@ -438,7 +438,7 @@ app.patch('/api/appointments/:id/status', authenticateBearerToken, async (req, r
             return res.status(403).json({ success: false, message: 'Privilege checking rejection.' });
         }
 
-        await dbPool.execute('UPDATE Appointments SET status = ? WHERE appointment_id = ?', [status, apptId]);
+        await dbPool.execute('UPDATE appointments SET status = ? WHERE appointment_id = ?', [status, apptId]);
 
         const [apptMeta] = await dbPool.execute('SELECT patient_id FROM appointments WHERE appointment_id = ?', [apptId]);
         const [patientMeta] = await dbPool.execute('SELECT user_id FROM patients WHERE patient_id = ?', [apptMeta[0].patient_id]);
@@ -501,18 +501,18 @@ app.put('/api/profile/update', authenticateBearerToken, async (req, res) => {
     try {
         if (req.userContext.role === 'Patient') {
             await dbPool.execute(
-                'UPDATE Patients SET full_name = ?, phone = ?, address = ? WHERE user_id = ?',
+                'UPDATE patients SET full_name = ?, phone = ?, address = ? WHERE user_id = ?',
                 [full_name, phone, address, req.userContext.userId]
             );
         } else if (req.userContext.role === 'Doctor') {
             await dbPool.execute(
-                'UPDATE Doctors SET full_name = ?, phone = ? WHERE user_id = ?',
+                'UPDATE doctors SET full_name = ?, phone = ? WHERE user_id = ?',
                 [full_name, phone, req.userContext.userId]
             );
         }
 
         const [updatedRows] = await dbPool.execute(
-            req.userContext.role === 'Patient' ? 'SELECT * FROM Patients WHERE user_id = ?' : 'SELECT * FROM Doctors WHERE user_id = ?',
+            req.userContext.role === 'Patient' ? 'SELECT * FROM patients WHERE user_id = ?' : 'SELECT * FROM doctors WHERE user_id = ?',
             [req.userContext.userId]
         );
         const user = updatedRows[0];
@@ -525,14 +525,14 @@ app.put('/api/profile/update', authenticateBearerToken, async (req, res) => {
 
 app.get('/api/profile/notifications', authenticateBearerToken, async (req, res) => {
     try {
-        const [rows] = await dbPool.execute('SELECT * FROM Notifications WHERE user_id = ? ORDER BY created_at DESC', [req.userContext.userId]);
+        const [rows] = await dbPool.execute('SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC', [req.userContext.userId]);
         return res.json(rows);
     } catch (err) { return res.status(500).json({ success: false, message: 'Alerts extraction fail.' }); }
 });
 
 app.delete('/api/profile/notifications/clear', authenticateBearerToken, async (req, res) => {
     try {
-        await dbPool.execute('DELETE FROM Notifications WHERE user_id = ?', [req.userContext.userId]);
+        await dbPool.execute('DELETE FROM notifications WHERE user_id = ?', [req.userContext.userId]);
         return res.json({ success: true, message: 'Alert blocks container flushed clean.' });
     } catch (err) { return res.status(500).json({ success: false, message: 'Flush event monitoring system fail.' }); }
 });
