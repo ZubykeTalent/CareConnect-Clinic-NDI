@@ -150,6 +150,66 @@ function initDOMListeners() {
             }
         });
     }
+
+    // Target the specific dashboard element or card displaying the patient count
+    const patientCounterWidget = document.getElementById('total-patients-counter');
+    // Target the container block or modal layout where the data grid table will be rendered
+    const detailedRecordsContainer = document.getElementById('records-display-panel');
+
+    if (patientCounterWidget && detailedRecordsContainer) {
+        patientCounterWidget.addEventListener('click', async () => {
+            try {
+                const serverResponse = await fetch('/api/admin/patients');
+                const collection = await serverResponse.json();
+
+                if (!serverResponse.ok) throw new Error(collection.message);
+
+                // Construct data grid elements with headings dynamically
+                let dataGridHTML = `
+                <div class="table-responsive" style="margin-top: 20px; padding: 15px; background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                    <h3 style="margin-bottom: 15px; color: #333;">Registered Patients Registry</h3>
+                    <table class="table" style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #eee; background-color: #f8f9fa;">
+                                <th style="padding: 10px;">ID</th>
+                                <th style="padding: 10px;">Full Name</th>
+                                <th style="padding: 10px;">Email Address</th>
+                                <th style="padding: 10px;">Phone Number</th>
+                                <th style="padding: 10px;">Gender</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+                // Loop and build data records fields sequentially
+                collection.forEach(item => {
+                    dataGridHTML += `
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 10px;">${item.patient_id}</td>
+                        <td style="padding: 10px;"><strong>${item.full_name}</strong></td>
+                        <td style="padding: 10px;">${item.email}</td>
+                        <td style="padding: 10px;">${item.phone || 'N/A'}</td>
+                        <td style="padding: 10px;">${item.gender || 'N/A'}</td>
+                    </tr>
+                `;
+                });
+
+                dataGridHTML += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+                // Inject the data table interface cleanly into your manager's view panels
+                detailedRecordsContainer.innerHTML = dataGridHTML;
+                detailedRecordsContainer.style.display = 'block'; // Make pane container visible
+
+            } catch (fault) {
+                console.error('Rendering panel exception logic trace:', fault);
+                alert('Could not render management logs array grid.');
+            }
+        });
+    }
 }
 
 /* --------------------------------------------------------------------------
@@ -278,55 +338,43 @@ async function handleLoginSubmission(e) {
 }
 
 async function handleRegistrationSubmission(e) {
-    e.preventDefault();
-    const pwd = document.getElementById('reg-password').value;
-    const confirmPwd = document.getElementById('reg-confirm-password').value;
+    e.preventDefault(); // 🔥 Stops the form from breaking and redirecting to the landing page instantly
 
-    if (pwd !== confirmPwd) {
-        showToast('Password verification alignment breach. Re-verify inputs.', 'danger');
-        return;
-    }
-
-    const formData = new FormData();
-    formData.append('full_name', document.getElementById('reg-name').value);
-    formData.append('gender', document.getElementById('reg-gender').value);
-    formData.append('dob', document.getElementById('reg-dob').value);
-    formData.append('phone', document.getElementById('reg-phone').value);
-    formData.append('email', document.getElementById('reg-email').value);
-    formData.append('address', document.getElementById('reg-address').value);
-    formData.append('emergency_contact', document.getElementById('reg-emergency').value);
-    formData.append('medical_history_summary', document.getElementById('reg-medical-summary').value);
-    formData.append('password', pwd);
-
-    const photoInput = document.getElementById('reg-photo');
-    if (photoInput.files.length > 0) {
-        formData.append('photo', photoInput.files[0]);
-    }
+    // Grab input values from your registration form fields
+    const fullName = document.getElementById('reg-fullname')?.value; // Replace with your actual HTML element IDs
+    const email = document.getElementById('reg-email')?.value;
+    const phone = document.getElementById('reg-phone')?.value;
+    const password = document.getElementById('reg-password')?.value;
+    const gender = document.getElementById('reg-gender')?.value;
+    const dob = document.getElementById('reg-dob')?.value;
+    const address = document.getElementById('reg-address')?.value;
 
     try {
-        await executeSecureAPIRequest('/auth/register-patient', {
-            method: 'POST',
-            body: formData // Boundaries handled natively by platform engine instances
-        });
-
-        showToast('Patient node established. Please authenticate via credentials pane.');
-        switchAuthPane('login');
-    } catch (err) { /* Error captured inside primary mapping matrix */ }
-}
-
-async function handleForgotPasswordSubmission(e) {
-    e.preventDefault();
-    const email = document.getElementById('reset-email').value;
-
-    try {
-        const data = await executeSecureAPIRequest('/auth/forgot-password', {
+        // Adjust the fetch URL path to match your exact backend registration endpoint
+        const response = await fetch('/api/auth/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email })
+            body: JSON.stringify({ full_name: fullName, email, phone, password, gender, dob, address })
         });
-        showToast(`Reset Token logged securely: ${data.token}. (Simulated dispatch)`, 'warning');
-        switchAuthPane('login');
-    } catch (err) { }
+
+        const result = await response.json();
+
+        if (response.ok) {
+            // 1. Alert the patient of their success status
+            alert('🎉 Registration Successful! You can now log in.');
+
+            // 2. Clear out the registration input fields
+            e.target.reset();
+
+            // 3. Automatically toggle views back to the login column pane using your built-in function
+            switchAuthPane('login');
+        } else {
+            alert('Registration Error: ' + (result.message || 'Please check your inputs.'));
+        }
+    } catch (error) {
+        console.error('Error handling submission pipeline:', error);
+        alert('Could not connect to the authentication server. Please try again.');
+    }
 }
 
 async function checkExistingSession() {

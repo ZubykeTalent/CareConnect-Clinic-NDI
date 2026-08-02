@@ -485,6 +485,18 @@ app.get('/api/manager/reports', authenticateBearerToken, restrictToRoles('Clinic
     } catch (err) { return res.status(500).json({ success: false, message: 'Analytics computation pipeline error mapping metric indices.' }); }
 });
 
+// Endpoint to pull complete profiles for the manager dashboard view
+app.get('/api/admin/patients', (req, res) => {
+    const sqlQuery = 'SELECT patient_id, full_name, email, phone, gender, dob FROM patients ORDER BY patient_id DESC';
+
+    db.query(sqlQuery, (error, dataset) => {
+        if (error) {
+            console.error('Database pull error:', error);
+            return res.status(500).json({ message: 'Failed to access customer records repository.' });
+        }
+        res.json(dataset);
+    });
+});
 
 // --- CATEGORY F: USER PROFILE IDENTITY UTILITY ENDPOINTS ---
 

@@ -318,6 +318,7 @@ INSERT IGNORE INTO appointments (appointment_id, patient_id, doctor_id, appointm
 SET FOREIGN_KEY_CHECKS = 1;
 COMMIT;
  -- USE careconnect;
+ SELECT * FROM patients;
 SELECT user_id, email, role_id FROM Users;
 
 select * from patients;

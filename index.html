@@ -870,7 +870,7 @@
                 <!-- CHANGE THIS LINE (Line 945): -->
                 <div id="viewport-clinicmanager-home" class="dashboard-viewport hidden">
                     <div class="grid-4col metric-cards-strip">
-                        <div class="metric-card glassmorphism">
+                        <div id="total-patients-counter" class="metric-card glassmorphism" style="cursor: pointer;">
                             <div class="m-icon color-blue"><i class="fa-solid fa-users"></i></div>
                             <div class="m-data">
                                 <h3 id="m-stat-patients">0</h3>
@@ -899,6 +899,8 @@
                             </div>
                         </div>
                     </div>
+                    <!-- The patient records table will render inside here when the counter is clicked -->
+                    <div id="records-display-panel" style="display: none; margin-top: 25px;"></div>
 
                     <div class="grid-2col dashboard-layout-main-grid mt-4">
                         <div class="content-block-card glassmorphism">
