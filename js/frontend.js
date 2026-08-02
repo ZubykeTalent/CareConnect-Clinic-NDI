@@ -926,3 +926,36 @@ async function flushSystemNotifications() {
         fetchDashboardSystemNotifications();
     } catch (err) { }
 }
+async function handleForgotPasswordSubmission(e) {
+    e.preventDefault();
+
+    // Target 'reset-email' to perfectly match line 531 of your index.html
+    const emailInput = document.getElementById('reset-email');
+    const email = emailInput?.value;
+
+    if (!email) {
+        alert('Please enter your registered email address.');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/auth/forgot-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            alert('📩 A password reset request has been processed successfully! Check the system records.');
+            e.target.reset();
+            switchAuthPane('login');
+        } else {
+            alert('Error: ' + (result.message || 'Failed to process password reset request.'));
+        }
+    } catch (error) {
+        console.error('Forgot password network pipeline exception:', error);
+        alert('Could not connect to the authentication server. Please try again.');
+    }
+}
