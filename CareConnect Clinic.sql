@@ -320,6 +320,8 @@ COMMIT;
  -- USE careconnect;
 SELECT user_id, email, role_id FROM Users;
 
+select * from patients;
+
 -- USE careconnect;
 SHOW TABLES;
 

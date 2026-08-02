@@ -31,7 +31,16 @@ if (!fs.existsSync(uploadsDir)) {
 /* --------------------------------------------------------------------------
    1. GLOBAL SECURITY AND ROUTING ENGINE INNERWARE REGISTER
    -------------------------------------------------------------------------- */
-app.use(helmet());
+app.use(
+    helmet({
+        contentSecurityPolicy: {
+            directives: {
+                ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+                "img-src": ["'self'", "data:", "https://images.unsplash.com"],
+            },
+        },
+    })
+);
 app.use(cors({ origin: '*' })); // Enforces broad local development mapping boundaries
 app.use(express.json());
 // Automatically serve your frontend files (index.html, css, js) from the root folder
