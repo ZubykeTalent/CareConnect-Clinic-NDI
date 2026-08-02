@@ -119,11 +119,11 @@ function restrictToRoles(...allowedRoles) {
 async function emitAuditLogEvent(userId, action, ipAddress = '127.0.0.1') {
     try {
         await dbPool.execute(
-            'INSERT INTO AuditLogs (user_id, action_performed, ip_address) VALUES (?, ?, ?)',
+            'INSERT INTO auditLogs (user_id, action_performed, ip_address) VALUES (?, ?, ?)',
             [userId, action, ipAddress]
         );
         await dbPool.execute(
-            'INSERT INTO ActivityLogs (user_id, action, timestamp) VALUES (?, ?, NOW())',
+            'INSERT INTO activityLogs (user_id, action, timestamp) VALUES (?, ?, NOW())',
             [userId, action]
         );
     } catch (err) { console.error('Audit monitoring component exception:', err); }
@@ -132,7 +132,7 @@ async function emitAuditLogEvent(userId, action, ipAddress = '127.0.0.1') {
 async function appendNotificationNode(userId, message) {
     try {
         await dbPool.execute(
-            'INSERT INTO Notifications (user_id, message) VALUES (?, ?)',
+            'INSERT INTO notifications (user_id, message) VALUES (?, ?)',
             [userId, message]
         );
     } catch (err) { console.error('Notification node injection failure:', err); }
