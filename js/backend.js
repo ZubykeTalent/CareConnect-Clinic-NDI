@@ -118,15 +118,21 @@ function restrictToRoles(...allowedRoles) {
 
 async function emitAuditLogEvent(userId, action, ipAddress = '127.0.0.1') {
     try {
+        // Pass the query string directly as the first argument
         await dbPool.execute(
-            'INSERT INTO auditLogs (user_id, action_performed, ip_address) VALUES (?, ?, ?)',
+            'INSERT INTO auditlogs (user_id, action_performed, ip_address) VALUES (?, ?, ?)',
             [userId, action, ipAddress]
         );
+
+        // Changed activityLogs to lowercase 'activitylogs' to prevent the next cloud crash
         await dbPool.execute(
-            'INSERT INTO activityLogs (user_id, action, timestamp) VALUES (?, ?, NOW())',
+            'INSERT INTO activitylogs (user_id, action, timestamp) VALUES (?, ?, NOW())',
             [userId, action]
         );
-    } catch (err) { console.error('Audit monitoring component exception:', err); }
+
+    } catch (err) {
+        console.error('Audit monitoring component exception:', err);
+    }
 }
 
 async function appendNotificationNode(userId, message) {
