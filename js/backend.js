@@ -773,3 +773,23 @@ app.patch('/api/admin/appointments/:id/status', async (req, res) => {
         return res.status(500).json({ success: false, message: 'Internal engine fault modifying records registry rows.' });
     }
 });
+app.post('/api/contact/submit', async (req, res) => {
+    const { name, email, message } = req.body;
+
+    if (!name || !email || !message) {
+        return res.status(400).json({ success: false, message: 'All entry fields are required to route messages.' });
+    }
+
+    try {
+        // Direct insertion into the newly constructed feedback registry
+        await dbPool.execute(
+            'INSERT INTO contact_inquiries (full_name, email, message) VALUES (?, ?, ?)',
+            [name, email, message]
+        );
+
+        return res.status(200).json({ success: true, message: 'Message securely transmitted to administrative logs.' });
+    } catch (error) {
+        console.error('Contact submission execution breakdown:', error);
+        return res.status(500).json({ success: false, message: 'Internal pipeline fault logging your inquiry.' });
+    }
+});

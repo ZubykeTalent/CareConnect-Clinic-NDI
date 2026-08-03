@@ -1256,3 +1256,60 @@ document.addEventListener('click', async (event) => {
         actionButton.textContent = isApprove ? 'Approve' : 'Cancel';
     }
 });
+// Global automated click interceptor for the Secure Contact inquiry layout form
+document.addEventListener('click', async (event) => {
+    const submitButton = event.target.closest('button');
+    if (!submitButton || submitButton.textContent.trim() !== 'Transmit Secure Message') return;
+
+    event.preventDefault();
+
+    // Contextually trace form blocks around the active submission node
+    const contextualForm = submitButton.closest('form') || submitButton.parentElement;
+    if (!contextualForm) return;
+
+    // Isolate input element positions by structural type patterns safely
+    const textInputs = contextualForm.querySelectorAll('input');
+    const messageTextArea = contextualForm.querySelector('textarea') || contextualForm.querySelectorAll('input')[2];
+
+    if (!textInputs || textInputs.length < 2 || !messageTextArea) {
+        alert('Could not map layout structure markers. Ensure input forms are correctly compiled.');
+        return;
+    }
+
+    const name = textInputs[0].value.trim();
+    const email = textInputs[1].value.trim();
+    const message = messageTextArea.value.trim();
+
+    if (!name || !email || !message) {
+        alert('Please complete all form blocks before transmitting.');
+        return;
+    }
+
+    try {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Transmitting...';
+
+        const response = await fetch('/api/contact/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, email, message })
+        });
+
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message);
+
+        alert('\u2705 Transmit Confirmed! Your message has been saved to the administration console.');
+
+        // Reset inputs on success layout screens
+        textInputs[0].value = '';
+        textInputs[1].value = '';
+        messageTextArea.value = '';
+
+    } catch (error) {
+        console.error('Transmission tracking failure:', error);
+        alert(`Transmission rejected: ${error.message}`);
+    } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = 'Transmit Secure Message';
+    }
+});
