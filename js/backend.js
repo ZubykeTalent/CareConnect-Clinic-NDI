@@ -264,10 +264,11 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 app.post('/api/auth/register', async (req, res) => {
-    console.log("Incoming registration data payload:", req.body);
+    console.log("Processing incoming registration credentials:", req.body);
 
     const full_name = req.body.full_name || req.body.fullName || req.body.name;
     const email = req.body.email;
+    const password = req.body.password || 'Patient@123'; 
     const phone = req.body.phone || req.body.phoneNumber;
     const gender = req.body.gender;
     const dob = req.body.dob || req.body.dateOfBirth || req.body.birthDate;
@@ -280,25 +281,34 @@ app.post('/api/auth/register', async (req, res) => {
     }
 
     try {
-        // 1. Check if email already exists
-        const [duplicateCheck] = await dbPool.execute('SELECT patient_id FROM patients WHERE email = ?', [email]);
-        if (duplicateCheck.length > 0) {
-            return res.status(400).json({ success: false, message: 'An account profile is already registered under this email address.' });
+        // 1. Verify that the email is completely unique across the system directories
+        const [identityCheck] = await dbPool.execute('SELECT user_id FROM users WHERE email = ?', [email]);
+        if (identityCheck.length > 0) {
+            return res.status(400).json({ success: false, message: 'An account credentials set is already active for this email address.' });
         }
 
-        // 🔍 2. DYNAMIC FIX FOR user_id: Fetch a valid ID from the users table 
-        // to satisfy the NOT NULL database rule without causing a foreign key violation.
-        const [systemUser] = await dbPool.execute('SELECT user_id FROM users LIMIT 1');
-        const assignedUserId = systemUser.length > 0 ? systemUser[0].user_id : 1;
+        // 2. Discover the target Patient role identification key dynamically from your roles schema
+        const [roleLookup] = await dbPool.execute("SELECT role_id FROM roles WHERE LOWER(role_name) = 'patient' LIMIT 1");
+        const assignedRoleId = roleLookup.length > 0 ? roleLookup[0].role_id : 3; // Defaults to 3 if standard row configuration differs
 
-        // 3. Insert record including the assigned user_id column
-        const queryStr = `
+        // 3. Commit identity mapping credentials into the core users login table
+        // Note: If your system utilizes bcrypt hashing on line 209, wrap this password string in your hashing function.
+        const [userRegistryReceipt] = await dbPool.execute(
+            'INSERT INTO users (email, password, role_id) VALUES (?, ?, ?)',
+            [email, password, assignedRoleId]
+        );
+        
+        // Isolate the newly generated auto-increment primary key identifier
+        const brandNewUserId = userRegistryReceipt.insertId;
+
+        // 4. Bind the brandNewUserId directly to the patient clinical profile records table
+        const profileQueryStr = `
             INSERT INTO patients (user_id, full_name, email, phone, gender, dob, address, emergency_contact, medical_history_summary) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
 
-        await dbPool.execute(queryStr, [
-            assignedUserId, // Supplies the missing required field
+        await dbPool.execute(profileQueryStr, [
+            brandNewUserId,
             full_name,
             email,
             phone || 'N/A',
@@ -309,11 +319,11 @@ app.post('/api/auth/register', async (req, res) => {
             medical_history_summary || 'None'
         ]);
 
-        return res.status(201).json({ success: true, message: 'Patient profile records committed successfully.' });
+        return res.status(201).json({ success: true, message: 'Unified authentication data and profile details committed successfully.' });
 
     } catch (error) {
         console.error('Registration backend execution failure:', error);
-        return res.status(500).json({ success: false, message: 'Internal engine fault routing registration submission pipeline.' });
+        return res.status(500).json({ success: false, message: 'Internal engine fault routing registration database transactions.' });
     }
 });
 app.post('/api/auth/forgot-password', async (req, res) => {

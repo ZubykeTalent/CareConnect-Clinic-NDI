@@ -357,19 +357,21 @@ async function handleRegistrationSubmission(event) {
 
     const form = event.target;
 
-    // Fallback selection system: attempts to read by specific IDs, falling back to basic input types
+    // Select input elements using flexible fallback attributes
     const nameInput = document.getElementById('reg-fullname') || document.getElementById('fullname') || form.querySelector('input[type="text"]');
     const emailInput = document.getElementById('reg-email') || document.getElementById('email') || form.querySelector('input[type="email"]');
+    const passwordInput = document.getElementById('reg-password') || form.querySelector('input[type="password"]');
     const phoneInput = document.getElementById('reg-phone') || document.getElementById('phone') || form.querySelector('input[type="tel"]');
-    const genderInput = document.getElementById('reg-gender') || document.getElementById('gender') || form.querySelector('select');
+    const genderInput = document.getElementById('reg-gender') || document.getElementById('reg-gender-select') || form.querySelector('select');
     const dobInput = document.getElementById('reg-dob') || document.getElementById('dob') || form.querySelector('input[type="date"]');
     const addressInput = document.getElementById('reg-address') || document.getElementById('address');
     const historyInput = form.querySelector('textarea') || document.getElementById('medical-history');
 
-    // Create the data bundle to send to the backend
+    // Build the payload data object
     const payload = {
         full_name: nameInput ? nameInput.value.trim() : '',
         email: emailInput ? emailInput.value.trim() : '',
+        password: passwordInput && passwordInput.value ? passwordInput.value : 'Patient@123', // Fallback temporary password
         phone: phoneInput ? phoneInput.value.trim() : '',
         gender: genderInput ? genderInput.value : '',
         dob: dobInput ? dobInput.value : '',
@@ -377,15 +379,12 @@ async function handleRegistrationSubmission(event) {
         medical_history_summary: historyInput ? historyInput.value.trim() : ''
     };
 
-    // 🔍 This will let you inspect exactly what data JavaScript extracted in your browser console
-    console.log("Data harvested by frontend submission script:", payload);
+    console.log("Transmitting unified account payload to backend:", payload);
 
     try {
         const response = await fetch('/api/auth/register', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
 
@@ -396,8 +395,8 @@ async function handleRegistrationSubmission(event) {
             return;
         }
 
-        alert('Patient profile successfully registered!');
-        form.reset(); // Clear form fields on success
+        alert(`🎉 Account successfully created!\n\nPatient can now log in using:\n📧 Email: ${payload.email}\n🔑 Password: ${payload.password}`);
+        form.reset();
 
     } catch (error) {
         console.error("Submission pipeline error:", error);
