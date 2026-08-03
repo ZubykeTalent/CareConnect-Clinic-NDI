@@ -497,7 +497,7 @@ app.post('/api/doctors/appointments/:id/consultation', authenticateBearerToken, 
 });
 app.post('/api/doctor/triage', async (req, res) => {
     console.log("Processing clinical queue triage ingestion:", req.body);
-    
+
     const { patient_name, blood_pressure, temperature, pulse_rate, notes } = req.body;
 
     if (!blood_pressure || !temperature || !pulse_rate) {
@@ -507,7 +507,7 @@ app.post('/api/doctor/triage', async (req, res) => {
     try {
         // Construct detailed verification entry into your consultation queue notes or diagnostic schemas
         const structuredSummary = `[TRIAGE LOG] BP: ${blood_pressure} | Temp: ${temperature}°C | Pulse: ${pulse_rate} BPM. Notes: ${notes}`;
-        
+
         // Advance the patient status block using a pattern match fallback query
         const updateQuery = `
             UPDATE appointments 
@@ -519,8 +519,8 @@ app.post('/api/doctor/triage', async (req, res) => {
         `;
 
         await dbPool.execute(updateQuery, [
-            structuredSummary, 
-            structuredSummary, 
+            structuredSummary,
+            structuredSummary,
             `%${patient_name}%`,
             `%${patient_name}%`
         ]);
