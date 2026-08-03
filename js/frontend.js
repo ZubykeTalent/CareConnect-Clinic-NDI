@@ -170,7 +170,6 @@ function initDOMListeners() {
 
                 if (!serverResponse.ok) throw new Error(collection.message);
 
-                // Clean table header without the Emergency Contact Register column
                 let dataGridHTML = `
                 <div class="table-responsive glassmorphism" style="margin-top: 25px; padding: 20px; border-radius: 12px; border: 1px solid rgba(128, 128, 128, 0.2); overflow-x: auto;">
                     <h3 style="margin-bottom: 20px; color: inherit;">Comprehensive Patient Registry Log</h3>
@@ -205,7 +204,7 @@ function initDOMListeners() {
                         </td>
                         <td style="padding: 12px; max-width: 200px; word-wrap: break-word;">${item.address || 'N/A'}</td>
                         <td style="padding: 12px; max-width: 300px; word-wrap: break-word; line-height: 1.4;">
-                            ${item.medical_history || 'None'}
+                            ${item.medical_history_summary || 'None'}
                         </td>
                     </tr>
                 `;
