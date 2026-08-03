@@ -291,15 +291,13 @@ app.post('/api/auth/register', async (req, res) => {
         const [roleLookup] = await dbPool.execute("SELECT role_id FROM roles WHERE LOWER(role_name) = 'patient' LIMIT 1");
         const assignedRoleId = roleLookup.length > 0 ? roleLookup[0].role_id : 3;
 
-        // 🔐 3. CRYPTOGRAPHIC FIX: Securely hash the plain-text password before saving it.
-        // This ensures the login engine's verification match executes cleanly.
+        // 🔐 3. Securely hash the plain-text password
         const bcrypt = require('bcrypt');
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // NOTE: If the password column name in your users table is different (e.g. password_hash), 
-        // make sure to change the word 'password' below to match your exact column name.
+        // 💡 FIXED COLUMN NAME: Changed 'password' to 'password_hash' to match your database schema
         const [userRegistryReceipt] = await dbPool.execute(
-            'INSERT INTO users (email, password, role_id) VALUES (?, ?, ?)',
+            'INSERT INTO users (email, password_hash, role_id) VALUES (?, ?, ?)',
             [email, hashedPassword, assignedRoleId]
         );
 
