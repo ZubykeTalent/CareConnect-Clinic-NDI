@@ -280,26 +280,32 @@ app.post('/api/auth/register', async (req, res) => {
     }
 
     try {
+        // 1. Check if email already exists
         const [duplicateCheck] = await dbPool.execute('SELECT patient_id FROM patients WHERE email = ?', [email]);
         if (duplicateCheck.length > 0) {
             return res.status(400).json({ success: false, message: 'An account profile is already registered under this email address.' });
         }
 
+        // 🔍 2. DYNAMIC FIX FOR user_id: Fetch a valid ID from the users table 
+        // to satisfy the NOT NULL database rule without causing a foreign key violation.
+        const [systemUser] = await dbPool.execute('SELECT user_id FROM users LIMIT 1');
+        const assignedUserId = systemUser.length > 0 ? systemUser[0].user_id : 1;
+
+        // 3. Insert record including the assigned user_id column
         const queryStr = `
-            INSERT INTO patients (full_name, email, phone, gender, dob, address, emergency_contact, medical_history_summary) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO patients (user_id, full_name, email, phone, gender, dob, address, emergency_contact, medical_history_summary) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
 
-        // 💡 CHANGED HERE: Using 'N/A' or empty strings instead of null 
-        // to cleanly satisfy the database NOT NULL column rules.
         await dbPool.execute(queryStr, [
+            assignedUserId, // Supplies the missing required field
             full_name,
             email,
             phone || 'N/A',
             gender || 'N/A',
-            dob || null, // Date columns can still safely accept null values
+            dob || null, 
             address || 'N/A',
-            emergency_contact || 'N/A',
+            emergency_contact || 'N/A', 
             medical_history_summary || 'None'
         ]);
 
