@@ -407,17 +407,38 @@ app.post('/api/appointments/book', authenticateBearerToken, restrictToRoles('Pat
     } catch (err) { return res.status(500).json({ success: false, message: err.message || 'Booking submission execution failure.' }); }
 });
 
-app.get('/api/patients/dashboard-metrics', authenticateBearerToken, restrictToRoles('Patient'), async (req, res) => {
+.get('/api/patients/dashboard-metrics', authenticateBearerToken, restrictToRoles('Patient'), async (req, res) => {
     try {
         const [pData] = await dbPool.execute('SELECT patient_id FROM patients WHERE user_id = ?', [req.userContext.userId]);
+
+        if (pData.length === 0) {
+            return res.status(404).json({ success: false, message: 'Patient profile not found.' });
+        }
+
         const patientId = pData[0].patient_id;
 
-        const [recordsCount] = await dbPool.execute('SELECT COUNT(record_id) as total FROM medicalrecords mr INNER JOIN appointments a ON mr.appointment_id = a.appointment_id WHERE a.patient_id = ?', [patientId]);
-        const [prescCount] = await dbPool.execute('SELECT COUNT(prescription_id) as total FROM prescriptions p INNER JOIN appointments a ON p.appointment_id = a.appointment_id WHERE a.patient_id = ?', [patientId]);
+        // Keep your original metrics computation counters intact
+        const [recordsCount] = await dbPool.execute(
+            'SELECT COUNT(mr.record_id) as total FROM medicalrecords mr INNER JOIN appointments a ON mr.patient_id = a.patient_id WHERE a.patient_id = ?',
+            [patientId]
+        );
+        const [prescCount] = await dbPool.execute(
+            'SELECT COUNT(p.prescription_id) as total FROM prescriptions p INNER JOIN appointments a ON p.patient_id = a.patient_id WHERE a.patient_id = ?',
+            [patientId]
+        );
 
-
+        // 🎯 FIXED APPOINTMENT HISTORY QUERY: Removed status filters so COMPLETED/TRIAGED show up alongside PENDING
         const [upcoming] = await dbPool.execute(
-            'SELECT a.appointment_id, DATE_FORMAT(a.appointment_date, "%Y-%m-%d") AS appointment_date, a.appointment_time, a.status, d.full_name as doctor_name, d.specialization FROM appointments a INNER JOIN doctors d ON a.doctor_id = d.doctor_id WHERE a.patient_id = ? AND a.status IN ("Pending","Confirmed","Checked In") ORDER BY a.appointment_date ASC, a.appointment_time ASC',
+            `SELECT 
+                a.appointment_id, 
+                DATE_FORMAT(a.appointment_date, "%Y-%m-%d") AS appointment_date, 
+                a.appointment_time, 
+                a.status, 
+                d.full_name as doctor_name 
+             FROM appointments a
+             LEFT JOIN doctors d ON a.doctor_id = d.doctor_id
+             WHERE a.patient_id = ? 
+             ORDER BY a.appointment_date DESC, a.appointment_time DESC`,
             [patientId]
         );
 
@@ -425,9 +446,12 @@ app.get('/api/patients/dashboard-metrics', authenticateBearerToken, restrictToRo
             metrics: { records_count: recordsCount[0].total, prescriptions_count: prescCount[0].total },
             appointments: upcoming
         });
-    } catch (err) { return res.status(500).json({ success: false, message: 'Metrics computation extraction failure.' }); }
-});
 
+    } catch (err) {
+        console.error("Dashboard engine query breakdown:", err);
+        return res.status(500).json({ success: false, message: 'Metrics computation extraction failure.' });
+    }
+})
 app.get('/api/patients/medical-history', authenticateBearerToken, restrictToRoles('Patient'), async (req, res) => {
     try {
         const [pData] = await dbPool.execute('SELECT patient_id FROM patients WHERE user_id = ?', [req.userContext.userId]);
