@@ -985,3 +985,99 @@ async function handleForgotPasswordSubmission(e) {
         alert('Could not connect to the authentication server. Please try again.');
     }
 }
+// Listen for triage processing button actions across the consultation queue matrix
+document.addEventListener('click', async (event) => {
+    const triageTarget = event.target.closest('button');
+    if (!triageTarget || !triageTarget.textContent.includes('Process Triage')) return;
+
+    // Isolate the appointment/patient ID context if embedded in your row elements, or fall back safely
+    const rowElement = triageTarget.closest('tr');
+    const patientName = rowElement ? rowElement.querySelector('td:first-child').textContent.trim() : 'Patient';
+
+    // Create and inject a clean, glassmorphism-themed overlay form modal
+    const overlayForm = document.createElement('div');
+    overlayForm.id = 'triage-modal-overlay';
+    overlayForm.style = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px);
+        display: flex; justify-content: center; align-items: center; z-index: 9999;
+    `;
+
+    overlayForm.innerHTML = `
+        <div class="glassmorphism" style="background: rgba(255, 255, 255, 0.1); color: inherit; padding: 30px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.2); width: 100%; max-width: 450px; box-shadow: 0 8px 32px rgba(0,0,0,0.37);">
+            <h3 style="margin-bottom: 20px; color: inherit;">Clinical Triage: ${patientName}</h3>
+            <form id="triage-vitals-submission-form">
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-size: 0.9em;">Blood Pressure (mmHg)</label>
+                    <input type="text" id="triage-bp" placeholder="e.g., 120/80" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(128,128,128,0.4); background: rgba(0,0,0,0.1); color: inherit;">
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-size: 0.9em;">Body Temperature (°C)</label>
+                    <input type="text" id="triage-temp" placeholder="e.g., 36.8" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(128,128,128,0.4); background: rgba(0,0,0,0.1); color: inherit;">
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-size: 0.9em;">Pulse Rate (BPM)</label>
+                    <input type="text" id="triage-pulse" placeholder="e.g., 72" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(128,128,128,0.4); background: rgba(0,0,0,0.1); color: inherit;">
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 5px; font-size: 0.9em;">Triage Assessment Notes</label>
+                    <textarea id="triage-notes" rows="3" placeholder="Enter initial observations..." required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(128,128,128,0.4); background: rgba(0,0,0,0.1); color: inherit; resize: none;"></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" id="close-triage-modal" style="padding: 10px 15px; border-radius: 6px; border: none; background: rgba(128,128,128,0.3); color: inherit; cursor: pointer;">Cancel</button>
+                    <button type="submit" style="padding: 10px 20px; border-radius: 6px; border: none; background: #0056b3; color: #fff; cursor: pointer; font-weight: bold;">Commit Vitals</button>
+                </div>
+            </form>
+        </div>
+    `;
+
+    document.body.appendChild(overlayForm);
+
+    // Close Modal Handling
+    document.getElementById('close-triage-modal').addEventListener('click', () => overlayForm.remove());
+
+    // Submit Processing Handler
+    document.getElementById('triage-vitals-submission-form').addEventListener('submit', async (formEvent) => {
+        formEvent.preventDefault();
+
+        const payload = {
+            patient_name: patientName,
+            blood_pressure: document.getElementById('triage-bp').value.trim(),
+            temperature: document.getElementById('triage-temp').value.trim(),
+            pulse_rate: document.getElementById('triage-pulse').value.trim(),
+            notes: document.getElementById('triage-notes').value.trim()
+        };
+
+        try {
+            const response = await fetch('/api/doctor/triage', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) throw new Error(result.message);
+
+            alert('✅ Clinical triage updates recorded successfully.');
+            overlayForm.remove();
+
+            // Dynamically alter row status text visually without needing database reload loops
+            if (rowElement) {
+                const stateBadge = rowElement.querySelector('td:nth-child(4) span') || rowElement.querySelector('td:nth-child(4)');
+                if (stateBadge) {
+                    stateBadge.textContent = 'TRIAGED';
+                    stateBadge.style.background = 'rgba(40, 167, 69, 0.2)';
+                    stateBadge.style.color = '#28a745';
+                }
+                triageTarget.disabled = true;
+                triageTarget.style.opacity = '0.5';
+                triageTarget.textContent = 'Processed';
+            }
+
+        } catch (error) {
+            console.error('Triage pipeline execution error:', error);
+            alert(`Failed to save triage data: ${error.message}`);
+        }
+    });
+});

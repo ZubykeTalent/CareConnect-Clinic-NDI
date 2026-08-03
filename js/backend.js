@@ -495,6 +495,43 @@ app.post('/api/doctors/appointments/:id/consultation', authenticateBearerToken, 
         dbConnection.release();
     }
 });
+app.post('/api/doctor/triage', async (req, res) => {
+    console.log("Processing clinical queue triage ingestion:", req.body);
+    
+    const { patient_name, blood_pressure, temperature, pulse_rate, notes } = req.body;
+
+    if (!blood_pressure || !temperature || !pulse_rate) {
+        return res.status(400).json({ success: false, message: 'All biological core metric fields are required.' });
+    }
+
+    try {
+        // Construct detailed verification entry into your consultation queue notes or diagnostic schemas
+        const structuredSummary = `[TRIAGE LOG] BP: ${blood_pressure} | Temp: ${temperature}°C | Pulse: ${pulse_rate} BPM. Notes: ${notes}`;
+        
+        // Advance the patient status block using a pattern match fallback query
+        const updateQuery = `
+            UPDATE appointments 
+            SET status = 'TRIAGED', 
+                notes = COALESCE(CONCAT(notes, '\n', ?), ?) 
+            WHERE patient_id = (SELECT patient_id FROM patients WHERE full_name LIKE ? LIMIT 1)
+               OR notes LIKE ?
+            ORDER BY appointment_id DESC LIMIT 1
+        `;
+
+        await dbPool.execute(updateQuery, [
+            structuredSummary, 
+            structuredSummary, 
+            `%${patient_name}%`,
+            `%${patient_name}%`
+        ]);
+
+        return res.status(200).json({ success: true, message: 'Vitals data structural metrics array logged cleanly.' });
+
+    } catch (error) {
+        console.error('Database execution error in routing triage entry profile:', error);
+        return res.status(500).json({ success: false, message: 'Internal diagnostic tracking server pipeline fault.' });
+    }
+});
 
 
 // --- CATEGORY D: ADMINISTRATIVE SCHEDULING CONTROLS ---
