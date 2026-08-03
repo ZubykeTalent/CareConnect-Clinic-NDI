@@ -1202,3 +1202,57 @@ document.addEventListener('click', async (event) => {
         }
     });
 });
+// Global event listener for Admin Scheduling Master operations matrix
+document.addEventListener('click', async (event) => {
+    const actionButton = event.target.closest('button');
+    if (!actionButton) return;
+
+    const textMatch = actionButton.textContent.trim();
+    const isApprove = textMatch === 'Approve';
+    const isCancel = textMatch === 'Cancel';
+
+    if (!isApprove && !isCancel) return;
+
+    // Locate the table row context and extract the numerical Appointment ID
+    const rowContext = actionButton.closest('tr');
+    if (!rowContext) return;
+
+    const idCell = rowContext.querySelector('td:first-child');
+    if (!idCell) return;
+
+    // Clean string formats like "#CC-08" down to raw digits ("8")
+    const appointmentId = idCell.textContent.replace('#CC-', '').replace('#', '').trim();
+
+    // Approving an appointment checks the patient into the doctor's live queue
+    const targetStatus = isApprove ? 'CHECKED IN' : 'CANCELLED';
+
+    try {
+        actionButton.disabled = true;
+        const originalText = actionButton.textContent;
+        actionButton.textContent = 'Wait...';
+
+        const response = await fetch(`/api/admin/appointments/${appointmentId}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: targetStatus })
+        });
+
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message);
+
+        alert(`\u2705 Appointment allocation updated to: ${targetStatus}`);
+
+        // Refresh the administrative grid layout dynamically or fallback to reload
+        if (typeof fetchPatientDashboardMetricsAndSchedules === 'function') {
+            await fetchPatientDashboardMetricsAndSchedules();
+        } else {
+            window.location.reload();
+        }
+
+    } catch (error) {
+        console.error('Admin action structural failure:', error);
+        alert(`Execution halted: ${error.message}`);
+        actionButton.disabled = false;
+        actionButton.textContent = isApprove ? 'Approve' : 'Cancel';
+    }
+});

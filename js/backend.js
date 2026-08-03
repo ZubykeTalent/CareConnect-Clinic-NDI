@@ -719,3 +719,33 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
     console.log(`CareConnect Medical Center Enterprise Backend Pipeline initialized on port ${PORT}.`);
 });
+
+app.patch('/api/admin/appointments/:id/status', async (req, res) => {
+    console.log(`Admin mutating state routing request for Appointment ID: ${req.params.id} to:`, req.body);
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!status) {
+        return res.status(400).json({ success: false, message: 'Status variable is required.' });
+    }
+
+    try {
+        const [updateResult] = await dbPool.execute(
+            'UPDATE appointments SET status = ? WHERE appointment_id = ?',
+            [status, id]
+        );
+
+        if (updateResult.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: 'No matching appointment record found in schema.' });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: `Appointment state transitioned to ${status} successfully.`
+        });
+
+    } catch (error) {
+        console.error('Database failure routing administrative appointment modifications:', error);
+        return res.status(500).json({ success: false, message: 'Internal engine fault modifying records registry rows.' });
+    }
+});
