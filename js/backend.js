@@ -268,7 +268,7 @@ app.post('/api/auth/register', async (req, res) => {
 
     const full_name = req.body.full_name || req.body.fullName || req.body.name;
     const email = req.body.email;
-    const password = req.body.password || 'Patient@123'; 
+    const password = req.body.password || 'Patient@123';
     const phone = req.body.phone || req.body.phoneNumber;
     const gender = req.body.gender;
     const dob = req.body.dob || req.body.dateOfBirth || req.body.birthDate;
@@ -297,7 +297,7 @@ app.post('/api/auth/register', async (req, res) => {
             'INSERT INTO users (email, password, role_id) VALUES (?, ?, ?)',
             [email, password, assignedRoleId]
         );
-        
+
         // Isolate the newly generated auto-increment primary key identifier
         const brandNewUserId = userRegistryReceipt.insertId;
 
@@ -313,9 +313,9 @@ app.post('/api/auth/register', async (req, res) => {
             email,
             phone || 'N/A',
             gender || 'N/A',
-            dob || null, 
+            dob || null,
             address || 'N/A',
-            emergency_contact || 'N/A', 
+            emergency_contact || 'N/A',
             medical_history_summary || 'None'
         ]);
 
