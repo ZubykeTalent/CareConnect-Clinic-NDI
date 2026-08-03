@@ -986,46 +986,62 @@ async function handleForgotPasswordSubmission(e) {
     }
 }
 // Listen for triage processing button actions across the consultation queue matrix
+// Listen for triage processing button actions across the consultation queue matrix
 document.addEventListener('click', async (event) => {
     const triageTarget = event.target.closest('button');
     if (!triageTarget || !triageTarget.textContent.includes('Process Triage')) return;
 
-    // Isolate the appointment/patient ID context if embedded in your row elements, or fall back safely
     const rowElement = triageTarget.closest('tr');
     const patientName = rowElement ? rowElement.querySelector('td:first-child').textContent.trim() : 'Patient';
+    
+    // 🎨 Dynamic Contrast Engine: Automatically detects active interface mode
+    const isDarkUI = document.body.classList.contains('dark') || 
+                     document.body.classList.contains('dark-mode') || 
+                     document.documentElement.classList.contains('dark') ||
+                     (window.getComputedStyle(document.body).backgroundColor.match(/\d+/g)?.slice(0,3).reduce((a,b) => parseInt(a)+parseInt(b), 0) < 300);
 
-    // Create and inject a clean, glassmorphism-themed overlay form modal
+    // High-Contrast Theme Palette Assignments
+    const cardBgColor = isDarkUI ? '#1a1f2c' : '#ffffff';
+    const primaryTextColor = isDarkUI ? '#ffffff' : '#111827';
+    const secondaryTextColor = isDarkUI ? '#9ca3af' : '#4b5563';
+    const fieldBgColor = isDarkUI ? '#262e3f' : '#f9fafb';
+    const fieldBorderColor = isDarkUI ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.2)';
+    const dismissBtnBg = isDarkUI ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
+
+    // Create and inject high-visibility modal overlay viewport framework
     const overlayForm = document.createElement('div');
     overlayForm.id = 'triage-modal-overlay';
     overlayForm.style = `
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px);
+        background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(4px);
         display: flex; justify-content: center; align-items: center; z-index: 9999;
     `;
 
     overlayForm.innerHTML = `
-        <div class="glassmorphism" style="background: rgba(255, 255, 255, 0.1); color: inherit; padding: 30px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.2); width: 100%; max-width: 450px; box-shadow: 0 8px 32px rgba(0,0,0,0.37);">
-            <h3 style="margin-bottom: 20px; color: inherit;">Clinical Triage: ${patientName}</h3>
+        <div style="background: ${cardBgColor}; color: ${primaryTextColor}; padding: 32px; border-radius: 14px; border: 1px solid ${isDarkUI ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}; width: 100%; max-width: 460px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3), 0 10px 10px -5px rgba(0,0,0,0.2);">
+            <h3 style="margin-top: 0; margin-bottom: 6px; color: ${primaryTextColor}; font-size: 1.45em; font-weight: 700;">Clinical Triage Ingestion</h3>
+            <p style="margin-top: 0; margin-bottom: 24px; color: ${secondaryTextColor}; font-size: 0.95em;">Recording metrics segment for: <strong>${patientName}</strong></p>
+            
             <form id="triage-vitals-submission-form">
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 5px; font-size: 0.9em;">Blood Pressure (mmHg)</label>
-                    <input type="text" id="triage-bp" placeholder="e.g., 120/80" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(128,128,128,0.4); background: rgba(0,0,0,0.1); color: inherit;">
+                <div style="margin-bottom: 18px;">
+                    <label style="display: block; margin-bottom: 6px; font-size: 0.9em; font-weight: 600; color: ${primaryTextColor};">Blood Pressure (mmHg)</label>
+                    <input type="text" id="triage-bp" placeholder="e.g., 120/80" required style="width: 100%; padding: 11px 14px; border-radius: 6px; border: 1px solid ${fieldBorderColor}; background: ${fieldBgColor}; color: ${primaryTextColor}; font-size: 1em; outline: none; box-sizing: border-box;">
                 </div>
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 5px; font-size: 0.9em;">Body Temperature (°C)</label>
-                    <input type="text" id="triage-temp" placeholder="e.g., 36.8" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(128,128,128,0.4); background: rgba(0,0,0,0.1); color: inherit;">
+                <div style="margin-bottom: 18px;">
+                    <label style="display: block; margin-bottom: 6px; font-size: 0.9em; font-weight: 600; color: ${primaryTextColor};">Body Temperature (°C)</label>
+                    <input type="text" id="triage-temp" placeholder="e.g., 36.8" required style="width: 100%; padding: 11px 14px; border-radius: 6px; border: 1px solid ${fieldBorderColor}; background: ${fieldBgColor}; color: ${primaryTextColor}; font-size: 1em; outline: none; box-sizing: border-box;">
                 </div>
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 5px; font-size: 0.9em;">Pulse Rate (BPM)</label>
-                    <input type="text" id="triage-pulse" placeholder="e.g., 72" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(128,128,128,0.4); background: rgba(0,0,0,0.1); color: inherit;">
+                <div style="margin-bottom: 18px;">
+                    <label style="display: block; margin-bottom: 6px; font-size: 0.9em; font-weight: 600; color: ${primaryTextColor};">Pulse Rate (BPM)</label>
+                    <input type="text" id="triage-pulse" placeholder="e.g., 72" required style="width: 100%; padding: 11px 14px; border-radius: 6px; border: 1px solid ${fieldBorderColor}; background: ${fieldBgColor}; color: ${primaryTextColor}; font-size: 1em; outline: none; box-sizing: border-box;">
                 </div>
-                <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 5px; font-size: 0.9em;">Triage Assessment Notes</label>
-                    <textarea id="triage-notes" rows="3" placeholder="Enter initial observations..." required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(128,128,128,0.4); background: rgba(0,0,0,0.1); color: inherit; resize: none;"></textarea>
+                <div style="margin-bottom: 24px;">
+                    <label style="display: block; margin-bottom: 6px; font-size: 0.9em; font-weight: 600; color: ${primaryTextColor};">Triage Assessment Notes</label>
+                    <textarea id="triage-notes" rows="3" placeholder="Enter initial observations..." required style="width: 100%; padding: 11px 14px; border-radius: 6px; border: 1px solid ${fieldBorderColor}; background: ${fieldBgColor}; color: ${primaryTextColor}; font-size: 1em; outline: none; resize: none; box-sizing: border-box; line-height: 1.4;"></textarea>
                 </div>
-                <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                    <button type="button" id="close-triage-modal" style="padding: 10px 15px; border-radius: 6px; border: none; background: rgba(128,128,128,0.3); color: inherit; cursor: pointer;">Cancel</button>
-                    <button type="submit" style="padding: 10px 20px; border-radius: 6px; border: none; background: #0056b3; color: #fff; cursor: pointer; font-weight: bold;">Commit Vitals</button>
+                <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                    <button type="button" id="close-triage-modal" style="padding: 11px 18px; border-radius: 6px; border: none; background: ${dismissBtnBg}; color: ${primaryTextColor}; cursor: pointer; font-weight: 500; font-size: 0.95em;">Cancel</button>
+                    <button type="submit" style="padding: 11px 22px; border-radius: 6px; border: none; background: #2563eb; color: #ffffff; cursor: pointer; font-weight: 600; font-size: 0.95em; box-shadow: 0 4px 6px -1px rgba(37,99,235,0.2);">Commit Vitals</button>
                 </div>
             </form>
         </div>
@@ -1033,10 +1049,9 @@ document.addEventListener('click', async (event) => {
 
     document.body.appendChild(overlayForm);
 
-    // Close Modal Handling
+    // Modal UI Interactivity Controllers
     document.getElementById('close-triage-modal').addEventListener('click', () => overlayForm.remove());
 
-    // Submit Processing Handler
     document.getElementById('triage-vitals-submission-form').addEventListener('submit', async (formEvent) => {
         formEvent.preventDefault();
 
@@ -1056,13 +1071,11 @@ document.addEventListener('click', async (event) => {
             });
 
             const result = await response.json();
-
             if (!response.ok) throw new Error(result.message);
 
             alert('✅ Clinical triage updates recorded successfully.');
             overlayForm.remove();
-
-            // Dynamically alter row status text visually without needing database reload loops
+            
             if (rowElement) {
                 const stateBadge = rowElement.querySelector('td:nth-child(4) span') || rowElement.querySelector('td:nth-child(4)');
                 if (stateBadge) {
