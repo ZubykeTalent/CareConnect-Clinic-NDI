@@ -719,10 +719,10 @@ async function loadPatientTreatmentCharts() {
     // Read the active login block from storage
     const loggedInUser = JSON.parse(localStorage.getItem('user')) || JSON.parse(sessionStorage.getItem('user'));
     const userId = loggedInUser ? (loggedInUser.user_id || loggedInUser.id) : null;
-    
+
     // 🎯 MATCHED ID TARGET: Points directly to line 726 of your index.html
     const chartsContainer = document.getElementById('patient-medical-records-stack');
-                               
+
     if (!chartsContainer || !userId) return;
 
     try {
@@ -742,7 +742,7 @@ async function loadPatientTreatmentCharts() {
 
         // Generate a structured clinical chart log layout inside your records stack layout
         let chartHtml = '<div style="display: flex; flex-direction: column; gap: 20px; width: 100%; box-sizing: border-box;">';
-        
+
         result.records.forEach(record => {
             const vitalsAndNotes = record.description || record.notes || 'No core metrics registered.';
             const prescription = record.prescription || record.medications || 'No therapeutic prescriptions issued.';
