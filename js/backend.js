@@ -289,16 +289,20 @@ app.post('/api/auth/register', async (req, res) => {
 
         // 2. Discover the target Patient role identification key dynamically from your roles schema
         const [roleLookup] = await dbPool.execute("SELECT role_id FROM roles WHERE LOWER(role_name) = 'patient' LIMIT 1");
-        const assignedRoleId = roleLookup.length > 0 ? roleLookup[0].role_id : 3; // Defaults to 3 if standard row configuration differs
+        const assignedRoleId = roleLookup.length > 0 ? roleLookup[0].role_id : 3;
 
-        // 3. Commit identity mapping credentials into the core users login table
-        // Note: If your system utilizes bcrypt hashing on line 209, wrap this password string in your hashing function.
+        // 🔐 3. CRYPTOGRAPHIC FIX: Securely hash the plain-text password before saving it.
+        // This ensures the login engine's verification match executes cleanly.
+        const bcrypt = require('bcrypt');
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // NOTE: If the password column name in your users table is different (e.g. password_hash), 
+        // make sure to change the word 'password' below to match your exact column name.
         const [userRegistryReceipt] = await dbPool.execute(
-            'INSERT INTO users (email, password_hash, role_id) VALUES (?, ?, ?)',
-            [email, password, assignedRoleId]
+            'INSERT INTO users (email, password, role_id) VALUES (?, ?, ?)',
+            [email, hashedPassword, assignedRoleId]
         );
 
-        // Isolate the newly generated auto-increment primary key identifier
         const brandNewUserId = userRegistryReceipt.insertId;
 
         // 4. Bind the brandNewUserId directly to the patient clinical profile records table
