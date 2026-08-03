@@ -407,7 +407,7 @@ app.post('/api/appointments/book', authenticateBearerToken, restrictToRoles('Pat
     } catch (err) { return res.status(500).json({ success: false, message: err.message || 'Booking submission execution failure.' }); }
 });
 
-.get('/api/patients/dashboard-metrics', authenticateBearerToken, restrictToRoles('Patient'), async (req, res) => {
+app.get('/api/patients/dashboard-metrics', authenticateBearerToken, restrictToRoles('Patient'), async (req, res) => {
     try {
         const [pData] = await dbPool.execute('SELECT patient_id FROM patients WHERE user_id = ?', [req.userContext.userId]);
 
@@ -417,7 +417,7 @@ app.post('/api/appointments/book', authenticateBearerToken, restrictToRoles('Pat
 
         const patientId = pData[0].patient_id;
 
-        // Keep your original metrics computation counters intact
+        // Metrics computation counters
         const [recordsCount] = await dbPool.execute(
             'SELECT COUNT(mr.record_id) as total FROM medicalrecords mr INNER JOIN appointments a ON mr.patient_id = a.patient_id WHERE a.patient_id = ?',
             [patientId]
@@ -427,7 +427,7 @@ app.post('/api/appointments/book', authenticateBearerToken, restrictToRoles('Pat
             [patientId]
         );
 
-        // 🎯 FIXED APPOINTMENT HISTORY QUERY: Removed status filters so COMPLETED/TRIAGED show up alongside PENDING
+        // Fetch all historical and active rows cleanly
         const [upcoming] = await dbPool.execute(
             `SELECT 
                 a.appointment_id, 
@@ -451,6 +451,31 @@ app.post('/api/appointments/book', authenticateBearerToken, restrictToRoles('Pat
         console.error("Dashboard engine query breakdown:", err);
         return res.status(500).json({ success: false, message: 'Metrics computation extraction failure.' });
     }
+});
+// 🎯 FIXED APPOINTMENT HISTORY QUERY: Removed status filters so COMPLETED/TRIAGED show up alongside PENDING
+const [upcoming] = await dbPool.execute(
+    `SELECT 
+                a.appointment_id, 
+                DATE_FORMAT(a.appointment_date, "%Y-%m-%d") AS appointment_date, 
+                a.appointment_time, 
+                a.status, 
+                d.full_name as doctor_name 
+             FROM appointments a
+             LEFT JOIN doctors d ON a.doctor_id = d.doctor_id
+             WHERE a.patient_id = ? 
+             ORDER BY a.appointment_date DESC, a.appointment_time DESC`,
+    [patientId]
+);
+
+return res.json({
+    metrics: { records_count: recordsCount[0].total, prescriptions_count: prescCount[0].total },
+    appointments: upcoming
+});
+
+    } catch (err) {
+    console.error("Dashboard engine query breakdown:", err);
+    return res.status(500).json({ success: false, message: 'Metrics computation extraction failure.' });
+}
 })
 app.get('/api/patients/medical-history', authenticateBearerToken, restrictToRoles('Patient'), async (req, res) => {
     try {
