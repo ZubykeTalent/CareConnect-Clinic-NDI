@@ -352,46 +352,58 @@ async function handleLoginSubmission(e) {
     } catch (err) { /* Intercepted inside central API handler module */ }
 }
 
-async function handleRegistrationSubmission(e) {
-    e.preventDefault(); // 🔥 Stops the form from breaking and redirecting to the landing page instantly
+async function handleRegistrationSubmission(event) {
+    event.preventDefault();
 
-    // Grab input values from your registration form fields
-    const fullName = document.getElementById('reg-fullname')?.value; // Replace with your actual HTML element IDs
-    const email = document.getElementById('reg-email')?.value;
-    const phone = document.getElementById('reg-phone')?.value;
-    const password = document.getElementById('reg-password')?.value;
-    const gender = document.getElementById('reg-gender')?.value;
-    const dob = document.getElementById('reg-dob')?.value;
-    const address = document.getElementById('reg-address')?.value;
+    const form = event.target;
+
+    // Fallback selection system: attempts to read by specific IDs, falling back to basic input types
+    const nameInput = document.getElementById('reg-fullname') || document.getElementById('fullname') || form.querySelector('input[type="text"]');
+    const emailInput = document.getElementById('reg-email') || document.getElementById('email') || form.querySelector('input[type="email"]');
+    const phoneInput = document.getElementById('reg-phone') || document.getElementById('phone') || form.querySelector('input[type="tel"]');
+    const genderInput = document.getElementById('reg-gender') || document.getElementById('gender') || form.querySelector('select');
+    const dobInput = document.getElementById('reg-dob') || document.getElementById('dob') || form.querySelector('input[type="date"]');
+    const addressInput = document.getElementById('reg-address') || document.getElementById('address');
+    const historyInput = form.querySelector('textarea') || document.getElementById('medical-history');
+
+    // Create the data bundle to send to the backend
+    const payload = {
+        full_name: nameInput ? nameInput.value.trim() : '',
+        email: emailInput ? emailInput.value.trim() : '',
+        phone: phoneInput ? phoneInput.value.trim() : '',
+        gender: genderInput ? genderInput.value : '',
+        dob: dobInput ? dobInput.value : '',
+        address: addressInput ? addressInput.value.trim() : '',
+        medical_history_summary: historyInput ? historyInput.value.trim() : ''
+    };
+
+    // 🔍 This will let you inspect exactly what data JavaScript extracted in your browser console
+    console.log("Data harvested by frontend submission script:", payload);
 
     try {
-        // Adjust the fetch URL path to match your exact backend registration endpoint
         const response = await fetch('/api/auth/register', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ full_name: fullName, email, phone, password, gender, dob, address })
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
         });
 
         const result = await response.json();
 
-        if (response.ok) {
-            // 1. Alert the patient of their success status
-            alert('🎉 Registration Successful! You can now log in.');
-
-            // 2. Clear out the registration input fields
-            e.target.reset();
-
-            // 3. Automatically toggle views back to the login column pane using your built-in function
-            switchAuthPane('login');
-        } else {
-            alert('Registration Error: ' + (result.message || 'Please check your inputs.'));
+        if (!response.ok) {
+            alert(`Registration Error: ${result.message}`);
+            return;
         }
+
+        alert('Patient profile successfully registered!');
+        form.reset(); // Clear form fields on success
+
     } catch (error) {
-        console.error('Error handling submission pipeline:', error);
-        alert('Could not connect to the authentication server. Please try again.');
+        console.error("Submission pipeline error:", error);
+        alert("Could not connect to the authentication server. Please try again.");
     }
 }
-
 async function checkExistingSession() {
     if (!AppState.token) return;
     try {
