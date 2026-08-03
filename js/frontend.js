@@ -572,61 +572,78 @@ async function fetchLandingDirectoryData() {
 
 // STAKEHOLDER 1: PATIENT ACTIONS MODULES
 async function fetchPatientDashboardMetricsAndSchedules() {
-    const loggedInUser = JSON.parse(localStorage.getItem('user')) || JSON.parse(sessionStorage.getItem('user'));
-    const userId = loggedInUser ? (loggedInUser.user_id || loggedInUser.id) : null;
-    if (!userId) return;
-
+    document.querySelectorAll('.patient-name-span').forEach(el => el.innerText = AppState.user.full_name);
     try {
-        // Fetch the unified patient dashboard datasets
-        const data = await executeSecureAPIRequest(`/api/patient/dashboard/${userId}`);
+        const data = await executeSecureAPIRequest('/patients/dashboard-metrics');
+        document.getElementById('p-metric-records').innerText = `${data.metrics.records_count} Total Nodes`;
+        document.getElementById('p-metric-prescriptions').innerText = `${data.metrics.prescriptions_count} Prescribed Items`;
 
-        // Target your upcoming encounters layout template grid
-        const upcomingContainer = document.getElementById('upcoming-appointments-container') ||
-            document.getElementById('patient-appointments-list') ||
-            document.querySelector('.appointments-stack');
+        const upcomingContainer = document.getElementById('patient-upcoming-table-body');
+        if (!upcomingContainer) return;
 
-        if (upcomingContainer && data.appointments) {
+           if (upcomingContainer && data.appointments) {
             if (data.appointments.length === 0) {
-                upcomingContainer.innerHTML = `<p style="opacity: 0.7; text-align: center; padding: 20px;">No scheduled encounters found.</p>`;
+                upcomingContainer.innerHTML = `<tr><td colspan="6" style="text-align: center; opacity: 0.7; padding: 20px;">No structural logs parsed.</td></tr>`;
                 return;
             }
 
-            // 🎯 FIXED DYNAMIC MAPPING: Generates responsive contrast badges matching database status flags
+            // 🎯 FIXED TABLE ROW MAPPER: Generates valid HTML table rows matching your layout headers
             upcomingContainer.innerHTML = data.appointments.map(a => {
                 const liveStatus = (a.status || a.appointment_status || 'PENDING').toUpperCase();
-
+                
                 let badgeBg = 'rgba(128, 128, 128, 0.15)';
                 let badgeColor = '#6b7280';
 
                 if (liveStatus === 'COMPLETED' || liveStatus === 'TRIAGED') {
-                    badgeBg = 'rgba(16, 185, 129, 0.15)'; // Emerald Green
+                    badgeBg = 'rgba(16, 185, 129, 0.15)'; 
                     badgeColor = '#10b981';
                 } else if (liveStatus === 'CHECKED IN') {
-                    badgeBg = 'rgba(59, 130, 246, 0.15)'; // Operational Blue
+                    badgeBg = 'rgba(59, 130, 246, 0.15)'; 
                     badgeColor = '#3b82f6';
                 } else if (liveStatus === 'PENDING') {
-                    badgeBg = 'rgba(245, 158, 11, 0.15)'; // Warning Orange
+                    badgeBg = 'rgba(245, 158, 11, 0.15)'; 
                     badgeColor = '#f59e0b';
                 }
 
                 return `
-                    <div style="background: var(--card-bg, #ffffff); border: 1px solid rgba(128,128,128,0.2); padding: 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
-                        <div>
-                            <strong style="display: block; font-size: 1.02em;">👨‍⚕️ Clinical Consultation Session</strong>
-                            <span style="font-size: 0.88em; opacity: 0.8; display: block; margin-top: 4px;">📅 Date: ${a.appointment_date || a.date || 'TBD'} | ⏰ Time: ${a.appointment_time || a.time || 'TBD'}</span>
-                        </div>
-                        
-                        <!-- Dynamic Live Status Badge Badge Target -->
-                        <span style="background: ${badgeBg}; color: ${badgeColor}; padding: 6px 14px; border-radius: 20px; font-size: 0.82em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px;">
-                            ${liveStatus}
-                        </span>
-                    </div>
+                    <tr>
+                        <td style="padding: 12px; font-weight: 600;">#${a.appointment_id || a.id}</td>
+                        <td style="padding: 12px;">Dr. ${a.doctor_name || a.doctor || 'Assigned Officer'}</td>
+                        <td style="padding: 12px;">${a.appointment_date || a.date || 'N/A'}</td>
+                        <td style="padding: 12px;">${a.appointment_time || a.time || 'N/A'}</td>
+                        <td style="padding: 12px;">
+                            <span style="background: ${badgeBg}; color: ${badgeColor}; padding: 4px 12px; border-radius: 12px; font-size: 0.85em; font-weight: 700; text-transform: uppercase; display: inline-block;">
+                                ${liveStatus}
+                            </span>
+                        </td>
+                        <td style="padding: 12px;">
+                            ${liveStatus === 'PENDING' ? `
+                                <button onclick="triggerCancelAppointmentByPatient(${a.appointment_id || a.id})" class="btn btn-sm btn-danger" style="padding: 4px 10px; font-size: 0.82em; border-radius: 4px; border: none; background: #dc2626; color: #ffffff; cursor: pointer;">Cancel</button>
+                            ` : `<span style="opacity: 0.5; font-size: 0.9em;">None</span>`}
+                        </td>
+                    </tr>
                 `;
             }).join('');
         }
-    } catch (err) {
-        console.error("Error running client metrics update grid array execution:", err);
-    }
+
+        const next = data.appointments[0];
+        document.getElementById('p-metric-next').innerText = `${next.appointment_date.split('T')[0]} @ ${next.appointment_time}`;
+
+        upcomingContainer.innerHTML = data.appointments.map(a => `
+            <tr>
+                <td><strong>#CC-0${a.appointment_id}</strong></td>
+                <td>Dr. ${a.doctor_name} (${a.specialization})</td>
+                <td>${a.appointment_date.split('T')[0]}</td>
+                <td>${a.appointment_time}</td>
+                <td><span class="badge-status status-${a.status.toLowerCase().replace(' ', '')}">${a.status}</span></td>
+                <td>
+                    ${a.status === 'Pending' || a.status === 'Confirmed' ? `
+                        <button class="btn btn-login" style="padding: 0.35rem 0.75rem; font-size:0.8rem;" onclick="triggerCancelAppointmentByPatient(${a.appointment_id})"><i class="fa-solid fa-calendar-xmark"></i> Cancel</button>
+                    ` : 'Locked'}
+                </td>
+            </tr>
+        `).join('');
+    } catch (err) { }
 }
 
 async function triggerCancelAppointmentByPatient(id) {
@@ -742,8 +759,10 @@ async function loadPatientTreatmentCharts() {
     const loggedInUser = JSON.parse(localStorage.getItem('user')) || JSON.parse(sessionStorage.getItem('user'));
     const userId = loggedInUser ? (loggedInUser.user_id || loggedInUser.id) : null;
 
-    // 🎯 MATCHED ID TARGET: Points directly to line 726 of your index.html
-    const chartsContainer = document.getElementById('patient-medical-records-stack');
+    // 🎯 TARGET CRITICAL CHANGE: Specifically hunts for your Treatment Charts DOM containers
+    const chartsContainer = document.getElementById('treatment-charts') ||
+        document.getElementById('treatment-charts-container') ||
+        document.querySelector('.treatment-charts-section');
 
     if (!chartsContainer || !userId) return;
 
@@ -762,7 +781,7 @@ async function loadPatientTreatmentCharts() {
             return;
         }
 
-        // Generate a structured clinical chart log layout inside your records stack layout
+        // Generate a structured, highly legible clinical chart log layout
         let chartHtml = '<div style="display: flex; flex-direction: column; gap: 20px; width: 100%; box-sizing: border-box;">';
 
         result.records.forEach(record => {
@@ -804,6 +823,7 @@ document.addEventListener('DOMContentLoaded', loadPatientTreatmentCharts);
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
     loadPatientTreatmentCharts();
 }
+
 // STAKEHOLDER 2: DOCTOR CLINICAL VIEWS MODULES
 async function fetchDoctorConsultationQueueGrid() {
     try {
