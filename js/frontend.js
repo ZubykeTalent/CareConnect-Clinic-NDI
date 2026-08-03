@@ -715,7 +715,73 @@ async function fetchPatientComprehensiveMedicalRecords() {
         `).join('');
     } catch (err) { }
 }
+async function loadPatientTreatmentCharts() {
+    // Read the active login block from storage
+    const loggedInUser = JSON.parse(localStorage.getItem('user')) || JSON.parse(sessionStorage.getItem('user'));
+    const userId = loggedInUser ? (loggedInUser.user_id || loggedInUser.id) : null;
+    
+    // 🎯 MATCHED ID TARGET: Points directly to line 726 of your index.html
+    const chartsContainer = document.getElementById('patient-medical-records-stack');
+                               
+    if (!chartsContainer || !userId) return;
 
+    try {
+        const response = await fetch(`/api/patient/records/${userId}`);
+        const result = await response.json();
+
+        if (!response.ok) throw new Error(result.message);
+
+        if (!result.records || result.records.length === 0) {
+            chartsContainer.innerHTML = `
+                <div style="padding: 30px; text-align: center; border: 2px dashed rgba(128,128,128,0.2); border-radius: 8px; opacity: 0.7;">
+                    <p style="margin: 0; font-weight: 500;">No clinical treatment charts or active prescriptions on file.</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Generate a structured clinical chart log layout inside your records stack layout
+        let chartHtml = '<div style="display: flex; flex-direction: column; gap: 20px; width: 100%; box-sizing: border-box;">';
+        
+        result.records.forEach(record => {
+            const vitalsAndNotes = record.description || record.notes || 'No core metrics registered.';
+            const prescription = record.prescription || record.medications || 'No therapeutic prescriptions issued.';
+            const encounterDate = record.date_recorded || record.created_at || 'Recent Session';
+
+            chartHtml += `
+                <div style="background: var(--card-bg, #ffffff); border: 1px solid rgba(128, 128, 128, 0.25); border-radius: 10px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid rgba(128,128,128,0.15); padding-bottom: 8px;">
+                        <span style="font-weight: 700; color: #2563eb; font-size: 1.05em;">📊 Treatment Chart Entry</span>
+                        <span style="font-size: 0.85em; opacity: 0.8; font-weight: 600;">📅 ${encounterDate}</span>
+                    </div>
+                    
+                    <div style="margin-bottom: 14px;">
+                        <span style="display: block; font-size: 0.85em; font-weight: 700; text-transform: uppercase; opacity: 0.7; margin-bottom: 4px;">Vitals & Status Note</span>
+                        <div style="padding: 10px; background: rgba(128,128,128,0.06); border-radius: 6px; font-size: 0.95em; line-height: 1.4;">${vitalsAndNotes}</div>
+                    </div>
+                    
+                    <div>
+                        <span style="display: block; font-size: 0.85em; font-weight: 700; text-transform: uppercase; color: #dc2626; margin-bottom: 4px;">Prescribed Medications</span>
+                        <div style="padding: 12px; background: rgba(220, 38, 38, 0.05); border-left: 3px solid #dc2626; border-radius: 4px; font-size: 0.95em; font-weight: 500; line-height: 1.4;">${prescription}</div>
+                    </div>
+                </div>
+            `;
+        });
+
+        chartHtml += '</div>';
+        chartsContainer.innerHTML = chartHtml;
+
+    } catch (error) {
+        console.error("Treatment chart rendering failure:", error);
+        chartsContainer.innerHTML = `<div style="color: #dc2626; font-weight: bold; padding: 15px;">Unable to refresh chart data: ${error.message}</div>`;
+    }
+}
+
+// Attach lifecycle loaders
+document.addEventListener('DOMContentLoaded', loadPatientTreatmentCharts);
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    loadPatientTreatmentCharts();
+}
 // STAKEHOLDER 2: DOCTOR CLINICAL VIEWS MODULES
 async function fetchDoctorConsultationQueueGrid() {
     try {
@@ -993,12 +1059,12 @@ document.addEventListener('click', async (event) => {
 
     const rowElement = triageTarget.closest('tr');
     const patientName = rowElement ? rowElement.querySelector('td:first-child').textContent.trim() : 'Patient';
-    
+
     // 🎨 Dynamic Contrast Engine: Automatically detects active interface mode
-    const isDarkUI = document.body.classList.contains('dark') || 
-                     document.body.classList.contains('dark-mode') || 
-                     document.documentElement.classList.contains('dark') ||
-                     (window.getComputedStyle(document.body).backgroundColor.match(/\d+/g)?.slice(0,3).reduce((a,b) => parseInt(a)+parseInt(b), 0) < 300);
+    const isDarkUI = document.body.classList.contains('dark') ||
+        document.body.classList.contains('dark-mode') ||
+        document.documentElement.classList.contains('dark') ||
+        (window.getComputedStyle(document.body).backgroundColor.match(/\d+/g)?.slice(0, 3).reduce((a, b) => parseInt(a) + parseInt(b), 0) < 300);
 
     // High-Contrast Theme Palette Assignments
     const cardBgColor = isDarkUI ? '#1a1f2c' : '#ffffff';
@@ -1075,7 +1141,7 @@ document.addEventListener('click', async (event) => {
 
             alert('✅ Clinical triage updates recorded successfully.');
             overlayForm.remove();
-            
+
             if (rowElement) {
                 const stateBadge = rowElement.querySelector('td:nth-child(4) span') || rowElement.querySelector('td:nth-child(4)');
                 if (stateBadge) {
