@@ -264,30 +264,35 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 app.post('/api/auth/register', async (req, res) => {
-    const {
-        full_name,
-        email,
-        phone,
-        gender,
-        dob,
-        address,
-        emergency_contact,
-        medical_history_summary
-    } = req.body;
+    // 🔍 This prints the incoming data directly to your Render log console for easy debugging
+    console.log("Incoming registration data payload:", req.body);
 
-    // Basic validation safety check
+    // Accept both snake_case and camelCase property names from the frontend
+    const full_name = req.body.full_name || req.body.fullName || req.body.name;
+    const email = req.body.email;
+    const phone = req.body.phone || req.body.phoneNumber;
+    const gender = req.body.gender;
+    const dob = req.body.dob || req.body.dateOfBirth || req.body.birthDate;
+    const address = req.body.address;
+    const emergency_contact = req.body.emergency_contact || req.body.emergencyContact;
+    const medical_history_summary = req.body.medical_history_summary || req.body.medicalHistorySummary || req.body.medical_history;
+
+    // Validate using the parsed variables
     if (!full_name || !email) {
-        return res.status(400).json({ success: false, message: 'Patient identity and email address are required fields.' });
+        return res.status(400).json({
+            success: false,
+            message: 'Patient identity and email address are required fields.'
+        });
     }
 
     try {
-        // 1. Check if the patient records already contain this email duplicate
+        // Check if email already exists
         const [duplicateCheck] = await dbPool.execute('SELECT patient_id FROM patients WHERE email = ?', [email]);
         if (duplicateCheck.length > 0) {
             return res.status(400).json({ success: false, message: 'An account profile is already registered under this email address.' });
         }
 
-        // 2. Insert the data matching your exact phpMyAdmin schema names
+        // Insert using exact phpMyAdmin column targets
         const queryStr = `
             INSERT INTO patients (full_name, email, phone, gender, dob, address, emergency_contact, medical_history_summary) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -304,7 +309,6 @@ app.post('/api/auth/register', async (req, res) => {
             medical_history_summary || null
         ]);
 
-        // 3. Return a successful pipeline status code response block
         return res.status(201).json({ success: true, message: 'Patient profile records committed successfully.' });
 
     } catch (error) {
@@ -312,7 +316,6 @@ app.post('/api/auth/register', async (req, res) => {
         return res.status(500).json({ success: false, message: 'Internal engine fault routing registration submission pipeline.' });
     }
 });
-
 app.post('/api/auth/forgot-password', async (req, res) => {
     const { email } = req.body;
     try {
