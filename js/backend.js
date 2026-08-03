@@ -263,6 +263,55 @@ app.post('/api/auth/login', async (req, res) => {
         return res.status(500).json({ success: false, message: 'Internal critical engine fault routing login.' });
     }
 });
+app.post('/api/auth/register', async (req, res) => {
+    const {
+        full_name,
+        email,
+        phone,
+        gender,
+        dob,
+        address,
+        emergency_contact,
+        medical_history_summary
+    } = req.body;
+
+    // Basic validation safety check
+    if (!full_name || !email) {
+        return res.status(400).json({ success: false, message: 'Patient identity and email address are required fields.' });
+    }
+
+    try {
+        // 1. Check if the patient records already contain this email duplicate
+        const [duplicateCheck] = await dbPool.execute('SELECT patient_id FROM patients WHERE email = ?', [email]);
+        if (duplicateCheck.length > 0) {
+            return res.status(400).json({ success: false, message: 'An account profile is already registered under this email address.' });
+        }
+
+        // 2. Insert the data matching your exact phpMyAdmin schema names
+        const queryStr = `
+            INSERT INTO patients (full_name, email, phone, gender, dob, address, emergency_contact, medical_history_summary) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+
+        await dbPool.execute(queryStr, [
+            full_name,
+            email,
+            phone || null,
+            gender || null,
+            dob || null,
+            address || null,
+            emergency_contact || null,
+            medical_history_summary || null
+        ]);
+
+        // 3. Return a successful pipeline status code response block
+        return res.status(201).json({ success: true, message: 'Patient profile records committed successfully.' });
+
+    } catch (error) {
+        console.error('Registration backend execution failure:', error);
+        return res.status(500).json({ success: false, message: 'Internal engine fault routing registration submission pipeline.' });
+    }
+});
 
 app.post('/api/auth/forgot-password', async (req, res) => {
     const { email } = req.body;
