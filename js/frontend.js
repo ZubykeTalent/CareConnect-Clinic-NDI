@@ -581,7 +581,7 @@ async function fetchPatientDashboardMetricsAndSchedules() {
         const upcomingContainer = document.getElementById('patient-upcoming-table-body');
         if (!upcomingContainer) return;
 
-           if (upcomingContainer && data.appointments) {
+        if (upcomingContainer && data.appointments) {
             if (data.appointments.length === 0) {
                 upcomingContainer.innerHTML = `<tr><td colspan="6" style="text-align: center; opacity: 0.7; padding: 20px;">No structural logs parsed.</td></tr>`;
                 return;
@@ -590,18 +590,18 @@ async function fetchPatientDashboardMetricsAndSchedules() {
             // 🎯 FIXED TABLE ROW MAPPER: Generates valid HTML table rows matching your layout headers
             upcomingContainer.innerHTML = data.appointments.map(a => {
                 const liveStatus = (a.status || a.appointment_status || 'PENDING').toUpperCase();
-                
+
                 let badgeBg = 'rgba(128, 128, 128, 0.15)';
                 let badgeColor = '#6b7280';
 
                 if (liveStatus === 'COMPLETED' || liveStatus === 'TRIAGED') {
-                    badgeBg = 'rgba(16, 185, 129, 0.15)'; 
+                    badgeBg = 'rgba(16, 185, 129, 0.15)';
                     badgeColor = '#10b981';
                 } else if (liveStatus === 'CHECKED IN') {
-                    badgeBg = 'rgba(59, 130, 246, 0.15)'; 
+                    badgeBg = 'rgba(59, 130, 246, 0.15)';
                     badgeColor = '#3b82f6';
                 } else if (liveStatus === 'PENDING') {
-                    badgeBg = 'rgba(245, 158, 11, 0.15)'; 
+                    badgeBg = 'rgba(245, 158, 11, 0.15)';
                     badgeColor = '#f59e0b';
                 }
 
