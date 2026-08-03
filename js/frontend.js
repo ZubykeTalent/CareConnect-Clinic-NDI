@@ -152,72 +152,88 @@ function initDOMListeners() {
     }
 
     // Target the specific dashboard element or card displaying the patient count
-   // Target elements inside your dashboard layout panel
-const patientCounterWidget = document.getElementById('total-patients-counter'); 
-const detailedRecordsContainer = document.getElementById('records-display-panel'); 
+    // Target elements inside your dashboard layout panel
+    const patientCounterWidget = document.getElementById('total-patients-counter');
+    const detailedRecordsContainer = document.getElementById('records-display-panel');
 
-if (patientCounterWidget && detailedRecordsContainer) {
-    patientCounterWidget.addEventListener('click', async () => {
-        
-        // 🔄 1. TOGGLE INTERCEPTOR: If the table is already open, hide it and exit immediately!
-        if (detailedRecordsContainer.style.display === 'block') {
-            detailedRecordsContainer.style.display = 'none';
-            return; 
-        }
+    if (patientCounterWidget && detailedRecordsContainer) {
+        patientCounterWidget.addEventListener('click', async () => {
 
-        try {
-            const serverResponse = await fetch('/api/admin/patients');
-            const collection = await serverResponse.json();
+            if (detailedRecordsContainer.style.display === 'block') {
+                detailedRecordsContainer.style.display = 'none';
+                return;
+            }
 
-            if (!serverResponse.ok) throw new Error(collection.message);
+            try {
+                const serverResponse = await fetch('/api/admin/patients');
+                const collection = await serverResponse.json();
 
-            // 🌙 2. DARK MODE ADAPTATION: We use 'glassmorphism' and 'color: inherit'
-            // so the table borders and text automatically change colors when clicking your dark theme toggle!
-            let dataGridHTML = `
-                <div class="table-responsive glassmorphism" style="margin-top: 25px; padding: 20px; border-radius: 12px; border: 1px solid rgba(128, 128, 128, 0.2);">
-                    <h3 style="margin-bottom: 20px; color: inherit;">Registered Patients Registry</h3>
-                    <table class="table" style="width: 100%; border-collapse: collapse; text-align: left; color: inherit;">
+                if (!serverResponse.ok) throw new Error(collection.message);
+
+                // Added layout table headers for DOB, Address, Emergency Details, and Medical History
+                let dataGridHTML = `
+                <div class="table-responsive glassmorphism" style="margin-top: 25px; padding: 20px; border-radius: 12px; border: 1px solid rgba(128, 128, 128, 0.2); overflow-x: auto;">
+                    <h3 style="margin-bottom: 20px; color: inherit;">Comprehensive Patient Registry Log</h3>
+                    <table class="table" style="width: 100%; border-collapse: collapse; text-align: left; color: inherit; min-width: 1000px;">
                         <thead>
                             <tr style="border-bottom: 2px solid rgba(128, 128, 128, 0.3);">
                                 <th style="padding: 12px;">ID</th>
-                                <th style="padding: 12px;">Full Name</th>
-                                <th style="padding: 12px;">Email Address</th>
-                                <th style="padding: 12px;">Phone Number</th>
-                                <th style="padding: 12px;">Gender</th>
+                                <th style="padding: 12px;">Patient Identity</th>
+                                <th style="padding: 12px;">Biological DOB</th>
+                                <th style="padding: 12px;">Contact Info</th>
+                                <th style="padding: 12px;">Residential Address</th>
+                                <th style="padding: 12px;">Emergency Contact Register</th>
+                                <th style="padding: 12px;">Medical History Context</th>
                             </tr>
                         </thead>
                         <tbody>
             `;
 
-            // Build the data records elements smoothly
-            collection.forEach(item => {
-                dataGridHTML += `
-                    <tr style="border-bottom: 1px solid rgba(128, 128, 128, 0.15);">
+                collection.forEach(item => {
+                    // Safely format the date string if it exists
+                    const formattedDOB = item.dob ? new Date(item.dob).toLocaleDateString() : 'N/A';
+
+                    dataGridHTML += `
+                    <tr style="border-bottom: 1px solid rgba(128, 128, 128, 0.15); color: inherit; vertical-align: top;">
                         <td style="padding: 12px;">${item.patient_id}</td>
-                        <td style="padding: 12px;"><strong>${item.full_name}</strong></td>
-                        <td style="padding: 12px;">${item.email}</td>
-                        <td style="padding: 12px;">${item.phone || 'N/A'}</td>
-                        <td style="padding: 12px;">${item.gender || 'N/A'}</td>
+                        <td style="padding: 12px;">
+                            <strong>${item.full_name}</strong><br>
+                            <small style="opacity: 0.7;">${item.gender || 'N/A'}</small>
+                        </td>
+                        <td style="padding: 12px;">${formattedDOB}</td>
+                        <td style="padding: 12px;">
+                            <div>${item.email}</div>
+                            <div style="font-size: 0.85em; opacity: 0.8;">${item.phone || 'N/A'}</div>
+                        </td>
+                        <td style="padding: 12px; max-width: 200px; word-wrap: break-word;">${item.address || 'N/A'}</td>
+                        <td style="padding: 12px;">
+                            <strong>${item.emergency_contact_name || 'N/A'}</strong><br>
+                            <span style="font-size: 0.85em; opacity: 0.8;">${item.emergency_contact_phone || 'N/A'}</span>
+                        </td>
+                        <td style="padding: 12px; max-width: 250px; word-wrap: break-word;">
+                            <span class="badge" style="background: rgba(128, 128, 128, 0.15); padding: 4px 8px; border-radius: 4px; display: inline-block;">
+                                ${item.medical_history || 'Clear Record Summary'}
+                            </span>
+                        </td>
                     </tr>
                 `;
-            });
+                });
 
-            dataGridHTML += `
+                dataGridHTML += `
                         </tbody>
                     </table>
                 </div>
             `;
 
-            // Inject the data table interface clean into the panel wrapper and display it
-            detailedRecordsContainer.innerHTML = dataGridHTML;
-            detailedRecordsContainer.style.display = 'block'; 
+                detailedRecordsContainer.innerHTML = dataGridHTML;
+                detailedRecordsContainer.style.display = 'block';
 
-        } catch (fault) {
-            console.error('Rendering panel exception logic trace:', fault);
-            alert('Could not render management logs array grid.');
-        }
-    });
-}
+            } catch (fault) {
+                console.error('Rendering panel exception logic trace:', fault);
+                alert('Could not render management logs array grid.');
+            }
+        });
+    }
 }
 
 /* --------------------------------------------------------------------------
