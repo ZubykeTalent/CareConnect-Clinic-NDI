@@ -294,7 +294,7 @@ app.post('/api/auth/register', async (req, res) => {
         // 3. Commit identity mapping credentials into the core users login table
         // Note: If your system utilizes bcrypt hashing on line 209, wrap this password string in your hashing function.
         const [userRegistryReceipt] = await dbPool.execute(
-            'INSERT INTO users (email, password, role_id) VALUES (?, ?, ?)',
+            'INSERT INTO users (email, password_hash, role_id) VALUES (?, ?, ?)',
             [email, password, assignedRoleId]
         );
 
