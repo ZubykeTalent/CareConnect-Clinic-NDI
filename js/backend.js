@@ -417,17 +417,17 @@ app.get('/api/patients/dashboard-metrics', authenticateBearerToken, restrictToRo
 
         const patientId = pData[0].patient_id;
 
-        // Metrics computation counters
+        // 🎯 FIXED RELATIONSHIP: Links tables using appointment_id instead of patient_id
         const [recordsCount] = await dbPool.execute(
-            'SELECT COUNT(mr.record_id) as total FROM medicalrecords mr INNER JOIN appointments a ON mr.patient_id = a.patient_id WHERE a.patient_id = ?',
+            'SELECT COUNT(mr.record_id) as total FROM medicalrecords mr INNER JOIN appointments a ON mr.appointment_id = a.appointment_id WHERE a.patient_id = ?',
             [patientId]
         );
         const [prescCount] = await dbPool.execute(
-            'SELECT COUNT(p.prescription_id) as total FROM prescriptions p INNER JOIN appointments a ON p.patient_id = a.patient_id WHERE a.patient_id = ?',
+            'SELECT COUNT(p.prescription_id) as total FROM prescriptions p INNER JOIN appointments a ON p.appointment_id = a.appointment_id WHERE a.patient_id = ?',
             [patientId]
         );
 
-        // Fetch all historical and active rows cleanly
+        // Fetch all historical and active rows cleanly without status filters
         const [upcoming] = await dbPool.execute(
             `SELECT 
                 a.appointment_id, 
