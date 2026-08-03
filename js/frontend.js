@@ -170,11 +170,11 @@ function initDOMListeners() {
 
                 if (!serverResponse.ok) throw new Error(collection.message);
 
-                // Added layout table headers for DOB, Address, Emergency Details, and Medical History
+                // Clean table header without the Emergency Contact Register column
                 let dataGridHTML = `
                 <div class="table-responsive glassmorphism" style="margin-top: 25px; padding: 20px; border-radius: 12px; border: 1px solid rgba(128, 128, 128, 0.2); overflow-x: auto;">
                     <h3 style="margin-bottom: 20px; color: inherit;">Comprehensive Patient Registry Log</h3>
-                    <table class="table" style="width: 100%; border-collapse: collapse; text-align: left; color: inherit; min-width: 1000px;">
+                    <table class="table" style="width: 100%; border-collapse: collapse; text-align: left; color: inherit; min-width: 900px;">
                         <thead>
                             <tr style="border-bottom: 2px solid rgba(128, 128, 128, 0.3);">
                                 <th style="padding: 12px;">ID</th>
@@ -182,7 +182,6 @@ function initDOMListeners() {
                                 <th style="padding: 12px;">Biological DOB</th>
                                 <th style="padding: 12px;">Contact Info</th>
                                 <th style="padding: 12px;">Residential Address</th>
-                                <th style="padding: 12px;">Emergency Contact Register</th>
                                 <th style="padding: 12px;">Medical History Context</th>
                             </tr>
                         </thead>
@@ -190,7 +189,6 @@ function initDOMListeners() {
             `;
 
                 collection.forEach(item => {
-                    // Safely format the date string if it exists
                     const formattedDOB = item.dob ? new Date(item.dob).toLocaleDateString() : 'N/A';
 
                     dataGridHTML += `
@@ -206,14 +204,8 @@ function initDOMListeners() {
                             <div style="font-size: 0.85em; opacity: 0.8;">${item.phone || 'N/A'}</div>
                         </td>
                         <td style="padding: 12px; max-width: 200px; word-wrap: break-word;">${item.address || 'N/A'}</td>
-                        <td style="padding: 12px;">
-                            <strong>${item.emergency_contact_name || 'N/A'}</strong><br>
-                            <span style="font-size: 0.85em; opacity: 0.8;">${item.emergency_contact_phone || 'N/A'}</span>
-                        </td>
-                        <td style="padding: 12px; max-width: 250px; word-wrap: break-word;">
-                            <span class="badge" style="background: rgba(128, 128, 128, 0.15); padding: 4px 8px; border-radius: 4px; display: inline-block;">
-                                ${item.medical_history || 'Clear Record Summary'}
-                            </span>
+                        <td style="padding: 12px; max-width: 300px; word-wrap: break-word; line-height: 1.4;">
+                            ${item.medical_history || 'None'}
                         </td>
                     </tr>
                 `;
