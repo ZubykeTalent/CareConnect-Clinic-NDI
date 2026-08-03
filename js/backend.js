@@ -264,10 +264,8 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 app.post('/api/auth/register', async (req, res) => {
-    // 🔍 This prints the incoming data directly to your Render log console for easy debugging
     console.log("Incoming registration data payload:", req.body);
 
-    // Accept both snake_case and camelCase property names from the frontend
     const full_name = req.body.full_name || req.body.fullName || req.body.name;
     const email = req.body.email;
     const phone = req.body.phone || req.body.phoneNumber;
@@ -277,36 +275,32 @@ app.post('/api/auth/register', async (req, res) => {
     const emergency_contact = req.body.emergency_contact || req.body.emergencyContact;
     const medical_history_summary = req.body.medical_history_summary || req.body.medicalHistorySummary || req.body.medical_history;
 
-    // Validate using the parsed variables
     if (!full_name || !email) {
-        return res.status(400).json({
-            success: false,
-            message: 'Patient identity and email address are required fields.'
-        });
+        return res.status(400).json({ success: false, message: 'Patient identity and email address are required fields.' });
     }
 
     try {
-        // Check if email already exists
         const [duplicateCheck] = await dbPool.execute('SELECT patient_id FROM patients WHERE email = ?', [email]);
         if (duplicateCheck.length > 0) {
             return res.status(400).json({ success: false, message: 'An account profile is already registered under this email address.' });
         }
 
-        // Insert using exact phpMyAdmin column targets
         const queryStr = `
             INSERT INTO patients (full_name, email, phone, gender, dob, address, emergency_contact, medical_history_summary) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `;
 
+        // 💡 CHANGED HERE: Using 'N/A' or empty strings instead of null 
+        // to cleanly satisfy the database NOT NULL column rules.
         await dbPool.execute(queryStr, [
             full_name,
             email,
-            phone || null,
-            gender || null,
-            dob || null,
-            address || null,
-            emergency_contact || null,
-            medical_history_summary || null
+            phone || 'N/A',
+            gender || 'N/A',
+            dob || null, // Date columns can still safely accept null values
+            address || 'N/A',
+            emergency_contact || 'N/A',
+            medical_history_summary || 'None'
         ]);
 
         return res.status(201).json({ success: true, message: 'Patient profile records committed successfully.' });
