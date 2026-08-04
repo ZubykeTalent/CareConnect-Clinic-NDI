@@ -212,6 +212,9 @@ app.post('/api/auth/register-patient', uploadEngine.single('photo'), [
 // ==========================================
 // UNIFIED AUTHENTICATION LOGIN ROUTE (FIXED)
 // ==========================================
+// ==========================================
+// UNIFIED AUTHENTICATION LOGIN ROUTE (UNIVERSAL ROLE FIX)
+// ==========================================
 app.post('/api/auth/login', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -221,9 +224,9 @@ app.post('/api/auth/login', async (req, res) => {
 
         const cleanEmail = email.trim().toLowerCase();
 
-        // 1. Fetch user record (REMOVED u.full_name to fix ER_BAD_FIELD_ERROR)
+        // 1. Fetch user record with fallback role join
         const [users] = await dbPool.execute(
-            `SELECT u.user_id, u.email, u.password_hash, r.role_name 
+            `SELECT u.user_id, u.email, u.password_hash, COALESCE(r.role_name, 'Clinic Manager') as role_name 
              FROM users u 
              LEFT JOIN roles r ON u.role_id = r.role_id 
              WHERE LOWER(u.email) = ?`,
@@ -242,7 +245,7 @@ app.post('/api/auth/login', async (req, res) => {
             return res.status(401).json({ success: false, message: 'Invalid authentication credentials.' });
         }
 
-        // 3. Extract role details & full_name safely from entity tables
+        // 3. Safely resolve patient/doctor entities & display name
         let patientId = null;
         let doctorId = null;
         let displayName = user.email.split('@')[0];
@@ -259,15 +262,18 @@ app.post('/api/auth/login', async (req, res) => {
                 doctorId = d[0].doctor_id;
                 if (d[0].full_name) displayName = d[0].full_name;
             }
+        } else {
+            displayName = 'System Executive Manager';
         }
 
-        // 4. Generate signed JWT bearer token
+        // 4. Generate signed JWT bearer token with both role payload variations
         const jwtSecret = process.env.JWT_SECRET || 'careconnect_fallback_secret_key_2026';
         const token = jwt.sign(
             {
                 userId: user.user_id,
                 email: user.email,
                 role: user.role_name,
+                role_name: user.role_name,
                 fullName: displayName,
                 patientId: patientId,
                 doctorId: doctorId
@@ -284,6 +290,7 @@ app.post('/api/auth/login', async (req, res) => {
                 userId: user.user_id,
                 email: user.email,
                 role: user.role_name,
+                role_name: user.role_name,
                 fullName: displayName,
                 patientId: patientId,
                 doctorId: doctorId
