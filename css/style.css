@@ -2080,42 +2080,56 @@ div:has(> table)>table {
 }
 
 /* ==========================================================================
-   DOCTOR VIEWPORT FLEX OVERFLOW FIX
+   DOCTOR CONSULTATION QUEUE - DEVICE-SPECIFIC DISPLAY RULES
    ========================================================================== */
 
-/* 1. Reset flex item min-width so the doctor viewport can shrink to fit mobile screens */
-#viewport-doctor-home,
-.dashboard-viewport,
-.dashboard-viewport-scrollable {
-    min-width: 0 !important;
-    max-width: 100% !important;
-    overflow-x: hidden !important;
-    box-sizing: border-box !important;
+/* 📱 MOBILE & TABLET VIEWPORT (Screen width <= 1024px) */
+@media screen and (max-width: 1024px) {
+    #viewport-doctor-home,
+    .dashboard-viewport {
+        min-width: 0 !important;
+        max-width: 100% !important;
+        overflow-x: hidden !important;
+    }
+
+    #viewport-doctor-home .content-block-card,
+    #viewport-doctor-home div:has(> table),
+    #viewport-doctor-home .table-responsive {
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-x: auto !important;
+        display: block !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #viewport-doctor-home table {
+        min-width: 580px !important; /* Preserves layout structure while swiping on mobile */
+        width: 100% !important;
+    }
+
+    #viewport-doctor-home th,
+    #viewport-doctor-home td {
+        white-space: nowrap !important;
+    }
 }
 
-/* 2. Target the card container wrapping the doctor queue and force horizontal touch scrolling */
-#viewport-doctor-home .content-block-card,
-#viewport-doctor-home div:has(> table),
-#viewport-doctor-home .table-responsive {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    overflow-x: auto !important;
-    display: block !important;
-    -webkit-overflow-scrolling: touch;
-}
+/* 🖥️ DESKTOP VIEWPORT (Screen width > 1024px) */
+@media screen and (min-width: 1025px) {
+    #viewport-doctor-home .content-block-card,
+    #viewport-doctor-home div:has(> table),
+    #viewport-doctor-home .table-responsive {
+        overflow-x: visible !important; /* Completely hides scrollbars on desktop */
+        display: block !important;
+        width: 100% !important;
+    }
 
-/* 3. Lock table structure so columns stay readable while scrolling */
-#viewport-doctor-home table {
-    width: 100% !important;
-    min-width: 580px !important;
-    /* Preserves column layout during horizontal swipe */
-    border-collapse: collapse;
-}
+    #viewport-doctor-home table {
+        min-width: auto !important; /* Allows full native desktop table fitting */
+        width: 100% !important;
+    }
 
-#viewport-doctor-home th,
-#viewport-doctor-home td {
-    white-space: nowrap !important;
-    /* Prevents awkward vertical text wrapping */
-    padding: 10px 12px !important;
+    #viewport-doctor-home th,
+    #viewport-doctor-home td {
+        white-space: normal !important;
+    }
 }
