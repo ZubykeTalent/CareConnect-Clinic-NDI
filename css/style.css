@@ -2140,14 +2140,10 @@ div:has(> table)>table {
 }
 
 /* ==========================================================================
-   CLINIC MANAGER - PATIENTS REGISTERED HIGH-SPECIFICITY ACCENT CARD
+   CLINIC MANAGER - PATIENTS REGISTERED DISTINCT ACCENT CARD
    ========================================================================== */
 
-/* Target the Patients Registered card explicitly across all parent container variations */
-#viewport-manager-home div[class*="card"]:first-child,
-#viewport-manager-home .grid-3col>div:first-child,
-#viewport-manager-home .m-data:first-child,
-.manager-analytics-grid>div:first-child {
+.patients-registered-active-card {
     background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
     border: 2px solid #60a5fa !important;
     color: #ffffff !important;
@@ -2157,26 +2153,20 @@ div:has(> table)>table {
     box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35) !important;
 }
 
-/* Force inner text, icons, and numbers inside the card to remain crisp white */
-#viewport-manager-home div[class*="card"]:first-child *,
-#viewport-manager-home .grid-3col>div:first-child *,
-#viewport-manager-home .m-data:first-child * {
+.patients-registered-active-card * {
     color: #ffffff !important;
 }
 
-/* Interactive Hover state */
-#viewport-manager-home div[class*="card"]:first-child:hover,
-#viewport-manager-home .grid-3col>div:first-child:hover,
-#viewport-manager-home .m-data:first-child:hover {
+.patients-registered-active-card:hover {
     transform: translateY(-4px) scale(1.02) !important;
     background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
     box-shadow: 0 12px 28px rgba(37, 99, 235, 0.5) !important;
     border-color: #93c5fd !important;
 }
 
-/* Dark Mode Theme Adaptation */
-body.dark-mode #viewport-manager-home div[class*="card"]:first-child,
-[data-theme="dark"] #viewport-manager-home div[class*="card"]:first-child {
+/* Dark Mode Adaptation */
+body.dark-mode .patients-registered-active-card,
+[data-theme="dark"] .patients-registered-active-card {
     background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%) !important;
     border-color: #3b82f6 !important;
     box-shadow: 0 6px 22px rgba(0, 0, 0, 0.6) !important;

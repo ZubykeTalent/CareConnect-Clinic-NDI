@@ -1306,3 +1306,21 @@ document.addEventListener('click', async (event) => {
         submitButton.textContent = 'Transmit Secure Message';
     }
 });
+
+// Dynamic highlighter for Clinic Manager "Patients Registered" tab
+function highlightPatientsRegisteredCard() {
+    const allCards = document.querySelectorAll('#viewport-manager-home div, .manager-analytics-grid div');
+    allCards.forEach(card => {
+        if (card.children.length < 5 && card.textContent.includes('Patients Registered')) {
+            card.classList.add('patients-registered-active-card');
+        }
+    });
+}
+
+// Attach highlighter trigger to page load and click events
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(highlightPatientsRegisteredCard, 500);
+});
+document.addEventListener('click', () => {
+    setTimeout(highlightPatientsRegisteredCard, 300);
+});

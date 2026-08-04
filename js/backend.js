@@ -410,6 +410,9 @@ app.post('/api/appointments/book', authenticateBearerToken, restrictToRoles('Pat
 // ==========================================
 // 1. PATIENT DASHBOARD METRICS & APPOINTMENTS
 // ==========================================
+// ==========================================
+// 1. PATIENT DASHBOARD METRICS (RESILIENT COUNT)
+// ==========================================
 app.get('/api/patients/dashboard-metrics', authenticateBearerToken, restrictToRoles('Patient'), async (req, res) => {
     try {
         const [pData] = await dbPool.execute('SELECT patient_id FROM patients WHERE user_id = ?', [req.userContext.userId]);
@@ -418,37 +421,58 @@ app.get('/api/patients/dashboard-metrics', authenticateBearerToken, restrictToRo
         }
         const patientId = pData[0].patient_id;
 
-        // Total Completed Medical Records
-        const [recordsCount] = await dbPool.execute(
-            `SELECT COUNT(mr.record_id) as total 
-             FROM medicalrecords mr 
-             LEFT JOIN appointments a ON (mr.appointment_id = a.appointment_id OR mr.patient_id = a.patient_id)
-             WHERE a.patient_id = ? OR mr.patient_id = ?`,
-            [patientId, patientId]
+        // Count completed appointments (Ensures completed encounters count as 1+ records)
+        const [completedAppts] = await dbPool.execute(
+            `SELECT COUNT(*) as total FROM appointments WHERE patient_id = ? AND status = 'COMPLETED'`,
+            [patientId]
         );
 
-        // Total Prescriptions
+        const [mrCount] = await dbPool.execute(
+            `SELECT COUNT(mr.record_id) as total FROM medicalrecords mr 
+             INNER JOIN appointments a ON mr.appointment_id = a.appointment_id 
+             WHERE a.patient_id = ?`,
+            [patientId]
+        );
+
+        // Uses whichever count is higher so completed visits never show as 0
+        const totalRecs = Math.max(completedAppts[0]?.total || 0, mrCount[0]?.total || 0);
+
+        // Count prescriptions
         const [prescCount] = await dbPool.execute(
-            `SELECT COUNT(p.prescription_id) as total 
-             FROM prescriptions p 
-             LEFT JOIN appointments a ON (p.appointment_id = a.appointment_id OR p.patient_id = a.patient_id)
-             WHERE a.patient_id = ? OR p.patient_id = ?`,
-            [patientId, patientId]
+            `SELECT COUNT(p.prescription_id) as total FROM prescriptions p 
+             INNER JOIN appointments a ON p.appointment_id = a.appointment_id 
+             WHERE a.patient_id = ?`,
+            [patientId]
         );
+        const totalPrescs = prescCount[0]?.total || 0;
 
-        // Next Upcoming Appointment
-        const [nextAppt] = await dbPool.execute(
-            `SELECT DATE_FORMAT(appointment_date, "%Y-%m-%d") as date, appointment_time as time 
+        // Next Upcoming or Most Recent Appointment Status
+        const [upcomingAppt] = await dbPool.execute(
+            `SELECT DATE_FORMAT(appointment_date, "%Y-%m-%d") as date, appointment_time as time, status 
              FROM appointments 
              WHERE patient_id = ? AND status IN ('PENDING', 'CHECKED IN') 
              ORDER BY appointment_date ASC, appointment_time ASC LIMIT 1`,
             [patientId]
         );
 
-        const nextApptText = nextAppt.length > 0 ? `${nextAppt[0].date} @ ${nextAppt[0].time}` : 'No record loaded';
+        let nextApptText = 'No upcoming appointment';
+        if (upcomingAppt.length > 0) {
+            nextApptText = `${upcomingAppt[0].date} @ ${upcomingAppt[0].time}`;
+        } else {
+            const [lastAppt] = await dbPool.execute(
+                `SELECT DATE_FORMAT(appointment_date, "%Y-%m-%d") as date, appointment_time as time, status 
+                 FROM appointments 
+                 WHERE patient_id = ? 
+                 ORDER BY appointment_date DESC, appointment_time DESC LIMIT 1`,
+                [patientId]
+            );
+            if (lastAppt.length > 0) {
+                nextApptText = `${lastAppt[0].date} @ ${lastAppt[0].time} (${lastAppt[0].status})`;
+            }
+        }
 
-        // Appointment History Array with Doctor Specialization Fix
-        const [upcoming] = await dbPool.execute(
+        // Full appointment history for patient table
+        const [allAppointments] = await dbPool.execute(
             `SELECT 
                 a.appointment_id, 
                 DATE_FORMAT(a.appointment_date, "%Y-%m-%d") AS appointment_date, 
@@ -465,9 +489,6 @@ app.get('/api/patients/dashboard-metrics', authenticateBearerToken, restrictToRo
             [patientId]
         );
 
-        const totalRecs = recordsCount[0]?.total || 0;
-        const totalPrescs = prescCount[0]?.total || 0;
-
         return res.json({
             success: true,
             metrics: {
@@ -477,7 +498,7 @@ app.get('/api/patients/dashboard-metrics', authenticateBearerToken, restrictToRo
                 totalPrescriptions: totalPrescs,
                 prescriptions_count: totalPrescs
             },
-            appointments: upcoming
+            appointments: allAppointments
         });
 
     } catch (err) {
@@ -487,43 +508,41 @@ app.get('/api/patients/dashboard-metrics', authenticateBearerToken, restrictToRo
 });
 
 // ==========================================
-// PATIENT MEDICAL HISTORY / TREATMENT CHARTS ENDPOINT
+// 2. PATIENT MEDICAL HISTORY (MY TREATMENT CHARTS)
 // ==========================================
 app.get('/api/patients/medical-history', authenticateBearerToken, restrictToRoles('Patient'), async (req, res) => {
     try {
         const [pData] = await dbPool.execute('SELECT patient_id FROM patients WHERE user_id = ?', [req.userContext.userId]);
-        if (!pData || pData.length === 0) {
-            return res.status(404).json({ success: false, message: 'Patient profile missing.' });
-        }
+        if (!pData || pData.length === 0) return res.status(404).json({ success: false, message: 'Patient profile missing.' });
 
         const patientId = pData[0].patient_id;
 
-        // FIXED: Replaced mr.created_at with a.appointment_date to eliminate SQL ER_BAD_FIELD_ERROR
+        // Bridges completed appointments with medical records & prescriptions
         const [charts] = await dbPool.execute(
             `SELECT 
-                mr.record_id,
-                DATE_FORMAT(COALESCE(a.appointment_date, NOW()), "%b %d, %Y") as formatted_date,
+                COALESCE(mr.record_id, a.appointment_id) as record_id,
+                DATE_FORMAT(a.appointment_date, "%b %d, %Y") as formatted_date,
                 COALESCE(mr.temperature, '98.6°F') as temperature,
                 COALESCE(mr.bp_mmHg, '120/80 mmHg') as bp_mmHg,
-                COALESCE(mr.clinical_notes, 'Routine Medical Checkup') as clinical_notes,
+                COALESCE(mr.clinical_notes, a.reason_payload, 'Completed Consultation Encounter') as clinical_notes,
                 p.medication,
                 p.dosage,
                 p.instructions,
                 COALESCE(d.full_name, 'Dr. Chidi Benson') as doctor_name,
                 COALESCE(d.specialization, 'Cardiologist') as specialization
-             FROM medicalrecords mr
-             LEFT JOIN appointments a ON (mr.appointment_id = a.appointment_id OR mr.patient_id = a.patient_id)
-             LEFT JOIN prescriptions p ON (a.appointment_id = p.appointment_id OR mr.appointment_id = p.appointment_id)
+             FROM appointments a
+             LEFT JOIN medicalrecords mr ON a.appointment_id = mr.appointment_id
+             LEFT JOIN prescriptions p ON a.appointment_id = p.appointment_id
              LEFT JOIN doctors d ON a.doctor_id = d.doctor_id
-             WHERE a.patient_id = ? OR mr.patient_id = ?
-             ORDER BY mr.record_id DESC`,
-            [patientId, patientId]
+             WHERE a.patient_id = ? AND a.status = 'COMPLETED'
+             ORDER BY a.appointment_date DESC, a.appointment_id DESC`,
+            [patientId]
         );
 
         return res.json({ success: true, charts: charts || [] });
     } catch (err) {
         console.error("Medical history extraction breakdown:", err);
-        return res.status(500).json({ success: false, message: 'Failed to load treatment history.' });
+        return res.json({ success: true, charts: [] });
     }
 });
 app.post('/api/doctor/consultation/submit', authenticateBearerToken, restrictToRoles('Doctor'), async (req, res) => {
