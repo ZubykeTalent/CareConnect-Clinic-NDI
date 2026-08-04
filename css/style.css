@@ -2033,3 +2033,48 @@ div:has(> table) {
         margin-top: 6px;
     }
 }
+
+/* ==========================================================================
+   DOCTOR CONSULTATION QUEUE MOBILE RESPONSIVE SCROLL WRAPPER
+   ========================================================================== */
+
+/* 1. Enforce horizontal scroll container on small viewports */
+#doctor-consultation-queue,
+#doctor-queue-container,
+.consultation-queue-wrapper,
+.doctor-consultation-queue-grid,
+div:has(> #doctor-queue-table),
+div:has(> .doctor-queue-table) {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    display: block !important;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+/* 2. Maintain structural column width so rows do not squish on mobile */
+#doctor-consultation-queue table,
+#doctor-queue-container table,
+.consultation-queue-table,
+div:has(> table)>table {
+    min-width: 680px !important;
+    /* Retains clean column spacing across mobile screens */
+    width: 100% !important;
+    border-collapse: collapse;
+}
+
+/* 3. Mobile touch padding and clean single-line cell wrapping */
+@media screen and (max-width: 768px) {
+
+    #doctor-consultation-queue th,
+    #doctor-consultation-queue td,
+    #doctor-queue-container th,
+    #doctor-queue-container td {
+        padding: 10px 12px !important;
+        white-space: nowrap !important;
+        /* Prevents text stacking inside table cells */
+        font-size: 0.88rem !important;
+    }
+}
