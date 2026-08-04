@@ -2085,6 +2085,7 @@ div:has(> table)>table {
 
 /* 📱 MOBILE & TABLET VIEWPORT (Screen width <= 1024px) */
 @media screen and (max-width: 1024px) {
+
     #viewport-doctor-home,
     .dashboard-viewport {
         min-width: 0 !important;
@@ -2103,7 +2104,8 @@ div:has(> table)>table {
     }
 
     #viewport-doctor-home table {
-        min-width: 580px !important; /* Preserves layout structure while swiping on mobile */
+        min-width: 580px !important;
+        /* Preserves layout structure while swiping on mobile */
         width: 100% !important;
     }
 
@@ -2115,16 +2117,19 @@ div:has(> table)>table {
 
 /* 🖥️ DESKTOP VIEWPORT (Screen width > 1024px) */
 @media screen and (min-width: 1025px) {
+
     #viewport-doctor-home .content-block-card,
     #viewport-doctor-home div:has(> table),
     #viewport-doctor-home .table-responsive {
-        overflow-x: visible !important; /* Completely hides scrollbars on desktop */
+        overflow-x: visible !important;
+        /* Completely hides scrollbars on desktop */
         display: block !important;
         width: 100% !important;
     }
 
     #viewport-doctor-home table {
-        min-width: auto !important; /* Allows full native desktop table fitting */
+        min-width: auto !important;
+        /* Allows full native desktop table fitting */
         width: 100% !important;
     }
 
