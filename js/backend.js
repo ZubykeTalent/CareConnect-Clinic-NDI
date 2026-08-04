@@ -209,6 +209,9 @@ app.post('/api/auth/register-patient', uploadEngine.single('photo'), [
 // ==========================================
 // UNIFIED AUTHENTICATION LOGIN ROUTE
 // ==========================================
+// ==========================================
+// UNIFIED AUTHENTICATION LOGIN ROUTE (FIXED)
+// ==========================================
 app.post('/api/auth/login', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -218,9 +221,9 @@ app.post('/api/auth/login', async (req, res) => {
 
         const cleanEmail = email.trim().toLowerCase();
 
-        // 1. Fetch user record with role definition
+        // 1. Fetch user record (REMOVED u.full_name to fix ER_BAD_FIELD_ERROR)
         const [users] = await dbPool.execute(
-            `SELECT u.user_id, u.email, u.password_hash, u.full_name, r.role_name 
+            `SELECT u.user_id, u.email, u.password_hash, r.role_name 
              FROM users u 
              LEFT JOIN roles r ON u.role_id = r.role_id 
              WHERE LOWER(u.email) = ?`,
@@ -239,16 +242,23 @@ app.post('/api/auth/login', async (req, res) => {
             return res.status(401).json({ success: false, message: 'Invalid authentication credentials.' });
         }
 
-        // 3. Gracefully extract role entities without throwing unhandled exceptions
+        // 3. Extract role details & full_name safely from entity tables
         let patientId = null;
         let doctorId = null;
+        let displayName = user.email.split('@')[0];
 
         if (user.role_name === 'Patient') {
-            const [p] = await dbPool.execute('SELECT patient_id FROM patients WHERE user_id = ?', [user.user_id]);
-            if (p && p.length > 0) patientId = p[0].patient_id;
+            const [p] = await dbPool.execute('SELECT patient_id, full_name FROM patients WHERE user_id = ?', [user.user_id]);
+            if (p && p.length > 0) {
+                patientId = p[0].patient_id;
+                if (p[0].full_name) displayName = p[0].full_name;
+            }
         } else if (user.role_name === 'Doctor') {
-            const [d] = await dbPool.execute('SELECT doctor_id FROM doctors WHERE user_id = ?', [user.user_id]);
-            if (d && d.length > 0) doctorId = d[0].doctor_id;
+            const [d] = await dbPool.execute('SELECT doctor_id, full_name FROM doctors WHERE user_id = ?', [user.user_id]);
+            if (d && d.length > 0) {
+                doctorId = d[0].doctor_id;
+                if (d[0].full_name) displayName = d[0].full_name;
+            }
         }
 
         // 4. Generate signed JWT bearer token
@@ -258,7 +268,7 @@ app.post('/api/auth/login', async (req, res) => {
                 userId: user.user_id,
                 email: user.email,
                 role: user.role_name,
-                fullName: user.full_name,
+                fullName: displayName,
                 patientId: patientId,
                 doctorId: doctorId
             },
@@ -274,7 +284,7 @@ app.post('/api/auth/login', async (req, res) => {
                 userId: user.user_id,
                 email: user.email,
                 role: user.role_name,
-                fullName: user.full_name,
+                fullName: displayName,
                 patientId: patientId,
                 doctorId: doctorId
             }
