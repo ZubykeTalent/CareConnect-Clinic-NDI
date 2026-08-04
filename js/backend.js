@@ -206,60 +206,82 @@ app.post('/api/auth/register-patient', uploadEngine.single('photo'), [
     }
 });
 
+// ==========================================
+// UNIFIED AUTHENTICATION LOGIN ROUTE
+// ==========================================
 app.post('/api/auth/login', async (req, res) => {
-    const { email, password } = req.body;
     try {
+        const { email, password } = req.body;
+        if (!email || !password) {
+            return res.status(400).json({ success: false, message: 'Email and password credentials are required.' });
+        }
+
+        const cleanEmail = email.trim().toLowerCase();
+
+        // 1. Fetch user record with role definition
         const [users] = await dbPool.execute(
-            'SELECT u.user_id, u.email, u.password_hash, r.role_name FROM users u INNER JOIN roles r ON u.role_id = r.role_id WHERE u.email = ?',
-            [email]
+            `SELECT u.user_id, u.email, u.password_hash, u.full_name, r.role_name 
+             FROM users u 
+             LEFT JOIN roles r ON u.role_id = r.role_id 
+             WHERE LOWER(u.email) = ?`,
+            [cleanEmail]
         );
 
-        if (users.length === 0) {
-            return res.status(401).json({ success: false, message: 'Cryptographic handshake rejected. Identity unknown.' });
+        if (!users || users.length === 0) {
+            return res.status(401).json({ success: false, message: 'Invalid authentication credentials.' });
         }
 
         const user = users[0];
-        // --- TEMPORARY DIAGNOSTIC LOGS ---
-        console.log("=== CARECONNECT LOGIN DEBUG ===");
-        console.log("1. Email incoming from front-end:", email);
-        console.log("2. Password incoming from front-end:", `[${password}]`);
-        console.log("3. Hash pulled from database:", user.password_hash);
-        console.log("4. Length of database hash string:", user.password_hash.length);
-        console.log("===============================");
-        const verified = await bcrypt.compare(password, user.password_hash);
-        if (!verified) {
-            return res.status(401).json({ success: false, message: 'Cryptographic authentication code mismatch.' });
+
+        // 2. Verify encrypted password payload
+        const isMatch = await bcrypt.compare(password, user.password_hash);
+        if (!isMatch) {
+            return res.status(401).json({ success: false, message: 'Invalid authentication credentials.' });
         }
 
-        // Gather Profile-Specific Hydrated naming variables based on active context
-        let personalName = 'System Executive Node';
+        // 3. Gracefully extract role entities without throwing unhandled exceptions
+        let patientId = null;
+        let doctorId = null;
+
         if (user.role_name === 'Patient') {
-            const [p] = await dbPool.execute('SELECT full_name FROM patients WHERE user_id = ?', [user.user_id]);
-            if (p.length > 0) personalName = p[0].full_name;
+            const [p] = await dbPool.execute('SELECT patient_id FROM patients WHERE user_id = ?', [user.user_id]);
+            if (p && p.length > 0) patientId = p[0].patient_id;
         } else if (user.role_name === 'Doctor') {
-            const [d] = await dbPool.execute('SELECT full_name FROM doctors WHERE user_id = ?', [user.user_id]);
-            if (d.length > 0) personalName = d[0].full_name;
+            const [d] = await dbPool.execute('SELECT doctor_id FROM doctors WHERE user_id = ?', [user.user_id]);
+            if (d && d.length > 0) doctorId = d[0].doctor_id;
         }
 
-        const sessionToken = jwt.sign(
-            { userId: user.user_id, email: user.email, role: user.role_name, name: personalName },
-            JWT_SECRET,
-            { expiresIn: '8h' }
+        // 4. Generate signed JWT bearer token
+        const jwtSecret = process.env.JWT_SECRET || 'careconnect_fallback_secret_key_2026';
+        const token = jwt.sign(
+            {
+                userId: user.user_id,
+                email: user.email,
+                role: user.role_name,
+                fullName: user.full_name,
+                patientId: patientId,
+                doctorId: doctorId
+            },
+            jwtSecret,
+            { expiresIn: '24h' }
         );
 
-        // Session block tracking mapping compliance constraints
-        await dbPool.execute(
-            'INSERT INTO sessions (user_id, token, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 8 HOUR))',
-            [user.user_id, sessionToken]
-        );
-
-        await emitAuditLogEvent(user.user_id, 'USER_SESSION_ESTABLISHED');
         return res.json({
             success: true,
-            token: sessionToken,
-            user: { user_id: user.user_id, email: user.email, role_name: user.role_name, full_name: personalName }
+            message: 'Authentication successful.',
+            token,
+            user: {
+                userId: user.user_id,
+                email: user.email,
+                role: user.role_name,
+                fullName: user.full_name,
+                patientId: patientId,
+                doctorId: doctorId
+            }
         });
+
     } catch (err) {
+        console.error("Critical Auth Route Fault:", err);
         return res.status(500).json({ success: false, message: 'Internal critical engine fault routing login.' });
     }
 });
