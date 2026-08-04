@@ -411,42 +411,71 @@ app.post('/api/appointments/book', authenticateBearerToken, restrictToRoles('Pat
 app.get('/api/patients/dashboard-metrics', authenticateBearerToken, restrictToRoles('Patient'), async (req, res) => {
     try {
         const [pData] = await dbPool.execute('SELECT patient_id FROM patients WHERE user_id = ?', [req.userContext.userId]);
-        if (pData.length === 0) return res.status(404).json({ success: false, message: 'Patient profile missing.' });
-
+        if (!pData || pData.length === 0) {
+            return res.status(404).json({ success: false, message: 'Patient profile not found.' });
+        }
         const patientId = pData[0].patient_id;
 
+        // 1. Total Completed Medical Records
         const [recordsCount] = await dbPool.execute(
-            `SELECT COUNT(mr.record_id) as total FROM medicalrecords mr 
-             INNER JOIN appointments a ON mr.appointment_id = a.appointment_id 
-             WHERE a.patient_id = ? AND a.status = 'COMPLETED'`, [patientId]
+            `SELECT COUNT(*) as total FROM medicalrecords WHERE patient_id = ?`,
+            [patientId]
         );
 
+        // 2. Total Prescriptions
         const [prescCount] = await dbPool.execute(
-            `SELECT COUNT(p.prescription_id) as total FROM prescriptions p 
-             INNER JOIN appointments a ON p.appointment_id = a.appointment_id 
-             WHERE a.patient_id = ? AND a.status = 'COMPLETED'`, [patientId]
+            `SELECT COUNT(*) as total FROM prescriptions WHERE patient_id = ?`,
+            [patientId]
         );
 
+        // 3. Next Upcoming Appointment
         const [nextAppt] = await dbPool.execute(
             `SELECT DATE_FORMAT(appointment_date, "%Y-%m-%d") as date, appointment_time as time 
-             FROM appointments WHERE patient_id = ? AND status IN ('PENDING', 'CHECKED IN') 
-             ORDER BY appointment_date ASC LIMIT 1`, [patientId]
+             FROM appointments 
+             WHERE patient_id = ? AND status IN ('PENDING', 'CHECKED IN') 
+             ORDER BY appointment_date ASC, appointment_time ASC LIMIT 1`,
+            [patientId]
         );
 
         const nextApptText = nextAppt.length > 0 ? `${nextAppt[0].date} @ ${nextAppt[0].time}` : 'No record loaded';
 
+        // 4. Appointment History Array (Fixes "No structural logs parsed")
+        const [upcoming] = await dbPool.execute(
+            `SELECT 
+                a.appointment_id, 
+                DATE_FORMAT(a.appointment_date, "%Y-%m-%d") AS appointment_date, 
+                a.appointment_time, 
+                a.status, 
+                COALESCE(d.full_name, 'Dr. Medical Officer') as doctor_name,
+                COALESCE(d.full_name, 'Dr. Medical Officer') as doctor_officer
+             FROM appointments a
+             LEFT JOIN doctors d ON a.doctor_id = d.doctor_id
+             WHERE a.patient_id = ? 
+             ORDER BY a.appointment_date DESC, a.appointment_time DESC`,
+            [patientId]
+        );
+
+        const totalRecs = recordsCount[0]?.total || 0;
+        const totalPrescs = prescCount[0]?.total || 0;
+
+        // Dual-payload formatting ensures backward compatibility across all frontend keys
         return res.json({
+            success: true,
             metrics: {
                 nextAppointment: nextApptText,
-                totalRecords: recordsCount[0].total || 0,
-                totalPrescriptions: prescCount[0].total || 0
-            }
+                totalRecords: totalRecs,
+                records_count: totalRecs,
+                totalPrescriptions: totalPrescs,
+                prescriptions_count: totalPrescs
+            },
+            appointments: upcoming
         });
+
     } catch (err) {
-        return res.status(500).json({ success: false, message: 'Metrics calculation error.' });
+        console.error("Dashboard engine query breakdown:", err);
+        return res.status(500).json({ success: false, message: 'Metrics computation extraction failure.' });
     }
 });
-
 // Treatment History Endpoint: Retrieves vitals, notes, and prescriptions
 app.get('/api/patients/medical-history', authenticateBearerToken, restrictToRoles('Patient'), async (req, res) => {
     try {
