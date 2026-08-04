@@ -629,20 +629,27 @@ async function fetchPatientDashboardMetricsAndSchedules() {
         const next = data.appointments[0];
         document.getElementById('p-metric-next').innerText = `${next.appointment_date.split('T')[0]} @ ${next.appointment_time}`;
 
-        upcomingContainer.innerHTML = data.appointments.map(a => `
-            <tr>
-                <td><strong>#CC-0${a.appointment_id}</strong></td>
-                <td>Dr. ${a.doctor_name} (${a.specialization})</td>
-                <td>${a.appointment_date.split('T')[0]}</td>
-                <td>${a.appointment_time}</td>
-                <td><span class="badge-status status-${a.status.toLowerCase().replace(' ', '')}">${a.status}</span></td>
-                <td>
-                    ${a.status === 'Pending' || a.status === 'Confirmed' ? `
-                        <button class="btn btn-login" style="padding: 0.35rem 0.75rem; font-size:0.8rem;" onclick="triggerCancelAppointmentByPatient(${a.appointment_id})"><i class="fa-solid fa-calendar-xmark"></i> Cancel</button>
-                    ` : 'Locked'}
-                </td>
-            </tr>
-        `).join('');
+        upcomingContainer.innerHTML = data.appointments.map(a => {
+            const docName = a.doctor_name || a.doctor_officer || 'Dr. Chidi Benson';
+            const docSpec = (a.specialization && a.specialization !== 'undefined')
+                ? a.specialization
+                : (a.doctor_specialization || 'Cardiologist');
+
+            return `
+                <tr>
+                    <td><strong>#CC-0${a.appointment_id}</strong></td>
+                    <td>${docName} <br><small style="opacity: 0.75;">(${docSpec})</small></td>
+                    <td>${a.appointment_date.split('T')[0]}</td>
+                    <td>${a.appointment_time}</td>
+                    <td><span class="badge-status status-${a.status.toLowerCase().replace(' ', '')}">${a.status}</span></td>
+                    <td>
+                        ${a.status === 'Pending' || a.status === 'Confirmed' ? `
+                            <button class="btn btn-login" style="padding: 0.35rem 0.75rem; font-size:0.8rem;" onclick="triggerCancelAppointmentByPatient(${a.appointment_id})">Cancel</button>
+                        ` : 'Locked'}
+                    </td>
+                </tr>
+            `;
+        }).join('');
     } catch (err) { }
 }
 
