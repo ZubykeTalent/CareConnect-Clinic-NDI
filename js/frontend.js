@@ -1324,3 +1324,16 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('click', () => {
     setTimeout(highlightPatientsRegisteredCard, 300);
 });
+
+// Automatic Manager Board "Patients Registered" Card Highlighter
+function activateManagerCardHighlight() {
+    const cards = document.querySelectorAll('#viewport-manager-home div, .manager-analytics-grid div');
+    cards.forEach(card => {
+        if (card.children.length < 5 && card.textContent.includes('Patients Registered')) {
+            card.classList.add('patients-registered-active-card');
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => setTimeout(activateManagerCardHighlight, 400));
+document.addEventListener('click', () => setTimeout(activateManagerCardHighlight, 300));
