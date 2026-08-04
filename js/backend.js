@@ -408,6 +408,9 @@ app.post('/api/appointments/book', authenticateBearerToken, restrictToRoles('Pat
 });
 
 // Metrics Endpoint: Counts completed records and prescriptions
+// ==========================================
+// PATIENT DASHBOARD METRICS ENDPOINT
+// ==========================================
 app.get('/api/patients/dashboard-metrics', authenticateBearerToken, restrictToRoles('Patient'), async (req, res) => {
     try {
         const [pData] = await dbPool.execute('SELECT patient_id FROM patients WHERE user_id = ?', [req.userContext.userId]);
@@ -416,15 +419,21 @@ app.get('/api/patients/dashboard-metrics', authenticateBearerToken, restrictToRo
         }
         const patientId = pData[0].patient_id;
 
-        // 1. Total Completed Medical Records
+        // 1. Total Medical Records (Joined via appointments to resolve schema correctly)
         const [recordsCount] = await dbPool.execute(
-            `SELECT COUNT(*) as total FROM medicalrecords WHERE patient_id = ?`,
+            `SELECT COUNT(mr.record_id) as total 
+             FROM medicalrecords mr 
+             INNER JOIN appointments a ON mr.appointment_id = a.appointment_id 
+             WHERE a.patient_id = ?`,
             [patientId]
         );
 
-        // 2. Total Prescriptions
+        // 2. Total Prescriptions (Joined via appointments)
         const [prescCount] = await dbPool.execute(
-            `SELECT COUNT(*) as total FROM prescriptions WHERE patient_id = ?`,
+            `SELECT COUNT(p.prescription_id) as total 
+             FROM prescriptions p 
+             INNER JOIN appointments a ON p.appointment_id = a.appointment_id 
+             WHERE a.patient_id = ?`,
             [patientId]
         );
 
@@ -439,7 +448,7 @@ app.get('/api/patients/dashboard-metrics', authenticateBearerToken, restrictToRo
 
         const nextApptText = nextAppt.length > 0 ? `${nextAppt[0].date} @ ${nextAppt[0].time}` : 'No record loaded';
 
-        // 4. Appointment History Array (Fixes "No structural logs parsed")
+        // 4. Complete Appointment History List
         const [upcoming] = await dbPool.execute(
             `SELECT 
                 a.appointment_id, 
@@ -458,7 +467,6 @@ app.get('/api/patients/dashboard-metrics', authenticateBearerToken, restrictToRo
         const totalRecs = recordsCount[0]?.total || 0;
         const totalPrescs = prescCount[0]?.total || 0;
 
-        // Dual-payload formatting ensures backward compatibility across all frontend keys
         return res.json({
             success: true,
             metrics: {
@@ -476,11 +484,14 @@ app.get('/api/patients/dashboard-metrics', authenticateBearerToken, restrictToRo
         return res.status(500).json({ success: false, message: 'Metrics computation extraction failure.' });
     }
 });
-// Treatment History Endpoint: Retrieves vitals, notes, and prescriptions
+
+// ==========================================
+// PATIENT MEDICAL HISTORY / TREATMENT CHARTS ENDPOINT
+// ==========================================
 app.get('/api/patients/medical-history', authenticateBearerToken, restrictToRoles('Patient'), async (req, res) => {
     try {
         const [pData] = await dbPool.execute('SELECT patient_id FROM patients WHERE user_id = ?', [req.userContext.userId]);
-        if (pData.length === 0) return res.status(404).json({ success: false, message: 'Patient profile missing.' });
+        if (!pData || pData.length === 0) return res.status(404).json({ success: false, message: 'Patient profile missing.' });
 
         const patientId = pData[0].patient_id;
 
@@ -494,18 +505,19 @@ app.get('/api/patients/medical-history', authenticateBearerToken, restrictToRole
                 p.medication,
                 p.dosage,
                 p.instructions,
-                d.full_name as doctor_name
+                COALESCE(d.full_name, 'Dr. Medical Officer') as doctor_name
              FROM medicalrecords mr
+             INNER JOIN appointments a ON mr.appointment_id = a.appointment_id
              LEFT JOIN prescriptions p ON mr.appointment_id = p.appointment_id
-             LEFT JOIN appointments a ON mr.appointment_id = a.appointment_id
              LEFT JOIN doctors d ON a.doctor_id = d.doctor_id
-             WHERE mr.patient_id = ?
+             WHERE a.patient_id = ?
              ORDER BY mr.created_at DESC`,
             [patientId]
         );
 
         return res.json({ success: true, charts });
     } catch (err) {
+        console.error("Medical history extraction breakdown:", err);
         return res.status(500).json({ success: false, message: 'Failed to load treatment history.' });
     }
 });
