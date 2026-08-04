@@ -76,9 +76,6 @@ const storageConfig = multer.diskStorage({
 });
 const uploadEngine = multer({ storage: storageConfig });
 
-/* --------------------------------------------------------------------------
-   2. SYSTEM SECURITY PRIVILEGES VALIDATION PIPELINE PIPES (MIDDLEWARE)
-   -------------------------------------------------------------------------- */
 async function authenticateBearerToken(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -88,21 +85,14 @@ async function authenticateBearerToken(req, res, next) {
     }
 
     try {
-        const decryptedPayload = jwt.verify(token, JWT_SECRET);
-
-        // Confirm Session validity criteria inside database structures
-        const [session] = await dbPool.execute(
-            'SELECT session_id FROM sessions WHERE user_id = ? AND token = ? AND expires_at > NOW()',
-            [decryptedPayload.userId, token]
-        );
-
-        if (session.length === 0) {
-            return res.status(401).json({ success: false, message: 'Session block invalidated or expired.' });
-        }
+        // Matches the exact fallback key used inside /api/auth/login (Line 281)
+        const jwtSecret = process.env.JWT_SECRET || 'careconnect_fallback_secret_key_2026';
+        const decryptedPayload = jwt.verify(token, jwtSecret);
 
         req.userContext = decryptedPayload;
         next();
     } catch (err) {
+        console.error("JWT Verification Exception:", err.message);
         return res.status(403).json({ success: false, message: 'Token token verification failure.' });
     }
 }
