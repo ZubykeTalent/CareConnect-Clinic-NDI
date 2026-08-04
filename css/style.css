@@ -2138,3 +2138,39 @@ div:has(> table)>table {
         white-space: normal !important;
     }
 }
+
+/* ==========================================================================
+   CLINIC MANAGER - PATIENTS REGISTERED INTERACTIVE TAB HIGHLIGHT
+   ========================================================================== */
+
+/* Target the first analytics card on the manager board */
+#viewport-manager-home .grid-3col>div:first-child,
+.manager-analytics-grid>div:first-child,
+div:has(> h3:contains("Patients Registered")) {
+    position: relative;
+    cursor: pointer !important;
+    border: 2px solid #3b82f6 !important;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(37, 99, 235, 0.02) 100%) !important;
+    transition: all 0.25s ease-in-out !important;
+    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.15) !important;
+}
+
+#viewport-manager-home .grid-3col>div:first-child:hover {
+    transform: translateY(-3px) scale(1.01);
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.25) !important;
+    border-color: #2563eb !important;
+}
+
+/* Dark Mode Theme Adaptive Overrides */
+body.dark-mode #viewport-manager-home .grid-3col>div:first-child,
+[data-theme="dark"] #viewport-manager-home .grid-3col>div:first-child {
+    border-color: #60a5fa !important;
+    background: linear-gradient(135deg, rgba(30, 58, 138, 0.35) 0%, rgba(17, 24, 39, 0.6) 100%) !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
+}
+
+body.dark-mode #viewport-manager-home .grid-3col>div:first-child:hover,
+[data-theme="dark"] #viewport-manager-home .grid-3col>div:first-child:hover {
+    border-color: #93c5fd !important;
+    box-shadow: 0 8px 22px rgba(96, 165, 250, 0.3) !important;
+}

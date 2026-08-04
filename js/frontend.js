@@ -755,69 +755,55 @@ async function fetchPatientComprehensiveMedicalRecords() {
     } catch (err) { }
 }
 async function loadPatientTreatmentCharts() {
-    // Read the active login block from storage
-    const loggedInUser = JSON.parse(localStorage.getItem('user')) || JSON.parse(sessionStorage.getItem('user'));
-    const userId = loggedInUser ? (loggedInUser.user_id || loggedInUser.id) : null;
+    const container = document.getElementById('treatment-charts-container') ||
+        document.querySelector('.treatment-records-wrapper') ||
+        document.querySelector('#viewport-patient-treatment .content-block-card');
 
-    // 🎯 TARGET CRITICAL CHANGE: Specifically hunts for your Treatment Charts DOM containers
-    const chartsContainer = document.getElementById('treatment-charts') ||
-        document.getElementById('treatment-charts-container') ||
-        document.querySelector('.treatment-charts-section');
-
-    if (!chartsContainer || !userId) return;
+    if (!container) return;
 
     try {
-        const response = await fetch(`/api/patient/records/${userId}`);
-        const result = await response.json();
+        const response = await fetch('/api/patients/medical-history', {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token') || sessionStorage.getItem('token')}` }
+        });
+        const data = await response.json();
 
-        if (!response.ok) throw new Error(result.message);
-
-        if (!result.records || result.records.length === 0) {
-            chartsContainer.innerHTML = `
-                <div style="padding: 30px; text-align: center; border: 2px dashed rgba(128,128,128,0.2); border-radius: 8px; opacity: 0.7;">
-                    <p style="margin: 0; font-weight: 500;">No clinical treatment charts or active prescriptions on file.</p>
-                </div>
-            `;
+        if (!data.success || !data.charts || data.charts.length === 0) {
+            container.innerHTML = `<div style="text-align: center; padding: 40px; opacity: 0.7;">No electronic diagnostic files generated on this clinical profile yet.</div>`;
             return;
         }
 
-        // Generate a structured, highly legible clinical chart log layout
-        let chartHtml = '<div style="display: flex; flex-direction: column; gap: 20px; width: 100%; box-sizing: border-box;">';
-
-        result.records.forEach(record => {
-            const vitalsAndNotes = record.description || record.notes || 'No core metrics registered.';
-            const prescription = record.prescription || record.medications || 'No therapeutic prescriptions issued.';
-            const encounterDate = record.date_recorded || record.created_at || 'Recent Session';
-
-            chartHtml += `
-                <div style="background: var(--card-bg, #ffffff); border: 1px solid rgba(128, 128, 128, 0.25); border-radius: 10px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid rgba(128,128,128,0.15); padding-bottom: 8px;">
-                        <span style="font-weight: 700; color: #2563eb; font-size: 1.05em;">📊 Treatment Chart Entry</span>
-                        <span style="font-size: 0.85em; opacity: 0.8; font-weight: 600;">📅 ${encounterDate}</span>
-                    </div>
-                    
-                    <div style="margin-bottom: 14px;">
-                        <span style="display: block; font-size: 0.85em; font-weight: 700; text-transform: uppercase; opacity: 0.7; margin-bottom: 4px;">Vitals & Status Note</span>
-                        <div style="padding: 10px; background: rgba(128,128,128,0.06); border-radius: 6px; font-size: 0.95em; line-height: 1.4;">${vitalsAndNotes}</div>
-                    </div>
-                    
-                    <div>
-                        <span style="display: block; font-size: 0.85em; font-weight: 700; text-transform: uppercase; color: #dc2626; margin-bottom: 4px;">Prescribed Medications</span>
-                        <div style="padding: 12px; background: rgba(220, 38, 38, 0.05); border-left: 3px solid #dc2626; border-radius: 4px; font-size: 0.95em; font-weight: 500; line-height: 1.4;">${prescription}</div>
-                    </div>
+        container.innerHTML = data.charts.map((chart, idx) => `
+            <div style="background: var(--card-bg, #ffffff); border: 1px solid var(--border-color, #e5e7eb); border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0,0,0,0.08); padding-bottom: 10px; margin-bottom: 14px;">
+                    <span style="font-weight: 700; color: #2563eb;"># Record Entry 0${data.charts.length - idx}</span>
+                    <span style="font-size: 0.85em; opacity: 0.75;">📅 ${chart.formatted_date}</span>
                 </div>
-            `;
-        });
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 14px; background: rgba(37, 99, 235, 0.05); padding: 12px; border-radius: 8px;">
+                    <div><small style="opacity: 0.7;">Attending Physician</small><br><strong>Dr. ${chart.doctor_name || 'Assigned Officer'}</strong></div>
+                    <div><small style="opacity: 0.7;">Body Temp</small><br><strong>🌡️ ${chart.temperature}</strong></div>
+                    <div><small style="opacity: 0.7;">Blood Pressure</small><br><strong>🫀 ${chart.bp_mmHg}</strong></div>
+                </div>
 
-        chartHtml += '</div>';
-        chartsContainer.innerHTML = chartHtml;
+                <div style="margin-bottom: 12px;">
+                    <strong style="font-size: 0.9em; display: block; margin-bottom: 4px;">Clinical Notes & Vitals Write-up:</strong>
+                    <p style="margin: 0; font-size: 0.95em; opacity: 0.9; line-height: 1.5;">${chart.clinical_notes}</p>
+                </div>
 
-    } catch (error) {
-        console.error("Treatment chart rendering failure:", error);
-        chartsContainer.innerHTML = `<div style="color: #dc2626; font-weight: bold; padding: 15px;">Unable to refresh chart data: ${error.message}</div>`;
+                ${chart.medication ? `
+                    <div style="background: rgba(16, 185, 129, 0.08); border-left: 4px solid #10b981; padding: 12px; border-radius: 0 8px 8px 0; margin-top: 10px;">
+                        <strong style="color: #059669; font-size: 0.9em;">💊 Prescribed Item & Instructions:</strong>
+                        <div style="font-weight: 700; margin-top: 2px;">${chart.medication} (${chart.dosage})</div>
+                        <small style="opacity: 0.8;">Instruction: ${chart.instructions}</small>
+                    </div>
+                ` : ''}
+            </div>
+        `).join('');
+
+    } catch (err) {
+        console.error("Treatment chart fetch error:", err);
     }
 }
-
 // Attach lifecycle loaders
 document.addEventListener('DOMContentLoaded', loadPatientTreatmentCharts);
 if (document.readyState === 'complete' || document.readyState === 'interactive') {

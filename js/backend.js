@@ -407,62 +407,134 @@ app.post('/api/appointments/book', authenticateBearerToken, restrictToRoles('Pat
     } catch (err) { return res.status(500).json({ success: false, message: err.message || 'Booking submission execution failure.' }); }
 });
 
+// Metrics Endpoint: Counts completed records and prescriptions
 app.get('/api/patients/dashboard-metrics', authenticateBearerToken, restrictToRoles('Patient'), async (req, res) => {
     try {
         const [pData] = await dbPool.execute('SELECT patient_id FROM patients WHERE user_id = ?', [req.userContext.userId]);
-
-        if (pData.length === 0) {
-            return res.status(404).json({ success: false, message: 'Patient profile not found.' });
-        }
+        if (pData.length === 0) return res.status(404).json({ success: false, message: 'Patient profile missing.' });
 
         const patientId = pData[0].patient_id;
 
-        // 🎯 FIXED RELATIONSHIP: Links tables using appointment_id instead of patient_id
         const [recordsCount] = await dbPool.execute(
-            'SELECT COUNT(mr.record_id) as total FROM medicalrecords mr INNER JOIN appointments a ON mr.appointment_id = a.appointment_id WHERE a.patient_id = ?',
-            [patientId]
-        );
-        const [prescCount] = await dbPool.execute(
-            'SELECT COUNT(p.prescription_id) as total FROM prescriptions p INNER JOIN appointments a ON p.appointment_id = a.appointment_id WHERE a.patient_id = ?',
-            [patientId]
+            `SELECT COUNT(mr.record_id) as total FROM medicalrecords mr 
+             INNER JOIN appointments a ON mr.appointment_id = a.appointment_id 
+             WHERE a.patient_id = ? AND a.status = 'COMPLETED'`, [patientId]
         );
 
-        // Fetch all historical and active rows cleanly without status filters
-        const [upcoming] = await dbPool.execute(
-            `SELECT 
-                a.appointment_id, 
-                DATE_FORMAT(a.appointment_date, "%Y-%m-%d") AS appointment_date, 
-                a.appointment_time, 
-                a.status, 
-                d.full_name as doctor_name 
-             FROM appointments a
-             LEFT JOIN doctors d ON a.doctor_id = d.doctor_id
-             WHERE a.patient_id = ? 
-             ORDER BY a.appointment_date DESC, a.appointment_time DESC`,
-            [patientId]
+        const [prescCount] = await dbPool.execute(
+            `SELECT COUNT(p.prescription_id) as total FROM prescriptions p 
+             INNER JOIN appointments a ON p.appointment_id = a.appointment_id 
+             WHERE a.patient_id = ? AND a.status = 'COMPLETED'`, [patientId]
         );
+
+        const [nextAppt] = await dbPool.execute(
+            `SELECT DATE_FORMAT(appointment_date, "%Y-%m-%d") as date, appointment_time as time 
+             FROM appointments WHERE patient_id = ? AND status IN ('PENDING', 'CHECKED IN') 
+             ORDER BY appointment_date ASC LIMIT 1`, [patientId]
+        );
+
+        const nextApptText = nextAppt.length > 0 ? `${nextAppt[0].date} @ ${nextAppt[0].time}` : 'No record loaded';
 
         return res.json({
-            metrics: { records_count: recordsCount[0].total, prescriptions_count: prescCount[0].total },
-            appointments: upcoming
+            metrics: {
+                nextAppointment: nextApptText,
+                totalRecords: recordsCount[0].total || 0,
+                totalPrescriptions: prescCount[0].total || 0
+            }
         });
-
     } catch (err) {
-        console.error("Dashboard engine query breakdown:", err);
-        return res.status(500).json({ success: false, message: 'Metrics computation extraction failure.' });
+        return res.status(500).json({ success: false, message: 'Metrics calculation error.' });
     }
 });
+
+// Treatment History Endpoint: Retrieves vitals, notes, and prescriptions
 app.get('/api/patients/medical-history', authenticateBearerToken, restrictToRoles('Patient'), async (req, res) => {
     try {
         const [pData] = await dbPool.execute('SELECT patient_id FROM patients WHERE user_id = ?', [req.userContext.userId]);
-        const [records] = await dbPool.execute(
-            'SELECT mr.record_id, mr.diagnosis, mr.treatment_notes, mr.record_date, p.medication_name, p.dosage, p.instructions FROM medicalrecords mr INNER JOIN appointments a ON mr.appointment_id = a.appointment_id LEFT JOIN prescriptions p ON a.appointment_id = p.appointment_id WHERE a.patient_id = ? ORDER BY mr.record_date DESC',
-            [pData[0].patient_id]
-        );
-        return res.json(records);
-    } catch (err) { return res.status(500).json({ success: false, message: 'EMR download routing mapping exception.' }); }
-});
+        if (pData.length === 0) return res.status(404).json({ success: false, message: 'Patient profile missing.' });
 
+        const patientId = pData[0].patient_id;
+
+        const [charts] = await dbPool.execute(
+            `SELECT 
+                mr.record_id,
+                DATE_FORMAT(mr.created_at, "%b %d, %Y - %h:%i %p") as formatted_date,
+                mr.temperature,
+                mr.bp_mmHg,
+                mr.clinical_notes,
+                p.medication,
+                p.dosage,
+                p.instructions,
+                d.full_name as doctor_name
+             FROM medicalrecords mr
+             LEFT JOIN prescriptions p ON mr.appointment_id = p.appointment_id
+             LEFT JOIN appointments a ON mr.appointment_id = a.appointment_id
+             LEFT JOIN doctors d ON a.doctor_id = d.doctor_id
+             WHERE mr.patient_id = ?
+             ORDER BY mr.created_at DESC`,
+            [patientId]
+        );
+
+        return res.json({ success: true, charts });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: 'Failed to load treatment history.' });
+    }
+});
+app.post('/api/doctor/consultation/submit', authenticateBearerToken, restrictToRoles('Doctor'), async (req, res) => {
+    const { appointment_id, patient_id, temperature, bp_mmHg, clinical_notes, medication, dosage, instructions } = req.body;
+
+    if (!appointment_id || !patient_id) {
+        return res.status(400).json({ success: false, message: 'Missing critical appointment identifiers.' });
+    }
+
+    const connection = await dbPool.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        // A. Insert Medical Record & Vitals
+        await connection.execute(
+            `INSERT INTO medicalrecords (appointment_id, patient_id, temperature, bp_mmHg, clinical_notes, created_at) 
+             VALUES (?, ?, ?, ?, ?, NOW())`,
+            [appointment_id, patient_id, temperature || 'N/A', bp_mmHg || 'N/A', clinical_notes || 'Routine Checkup']
+        );
+
+        // B. Insert Prescription Item if provided
+        if (medication) {
+            await connection.execute(
+                `INSERT INTO prescriptions (appointment_id, patient_id, medication, dosage, instructions, created_at) 
+                 VALUES (?, ?, ?, ?, ?, NOW())`,
+                [appointment_id, patient_id, medication, dosage || 'As Directed', instructions || 'Take after meals']
+            );
+        }
+
+        // C. Transition Appointment State to COMPLETED
+        await connection.execute(
+            `UPDATE appointments SET status = 'COMPLETED' WHERE appointment_id = ?`,
+            [appointment_id]
+        );
+
+        // D. Trigger Real-Time Patient Notification
+        await connection.execute(
+            `INSERT INTO notifications (user_id, title, message, is_read, created_at)
+             SELECT u.user_id, 'New Prescription & Medical Record Issued', 
+                    'Your doctor has finalized your consultation and published your updated treatment chart.', 0, NOW()
+             FROM patients p
+             JOIN users u ON p.user_id = u.user_id
+             WHERE p.patient_id = ?`,
+            [patient_id]
+        );
+
+        await connection.commit();
+        return res.json({ success: true, message: 'Consultation successfully finalized and published to patient portal.' });
+
+    } catch (error) {
+        await connection.rollback();
+        console.error('Consultation finalization error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to process consultation record.' });
+    } finally {
+        connection.release();
+    }
+});
 
 // --- CATEGORY C: DOCTOR WORKSPACE MODULE ENGINES ---
 
