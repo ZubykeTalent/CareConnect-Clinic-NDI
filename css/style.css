@@ -2190,3 +2190,31 @@ body.dark-mode .patients-registered-active-card,
 #total-patients-counter.patients-accent-card .m-icon {
     background: rgba(255, 255, 255, 0.25) !important;
 }
+
+/* ==========================================================================
+   VIEWPORT TAB ISOLATION & OVERFLOW FIX
+   ========================================================================== */
+
+/* Force inactive viewports to hide strictly */
+.viewport-section.hidden,
+div[id^="viewport-"].hidden,
+section[id^="viewport-"].hidden {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+}
+
+/* Scoped Patients Registered Accent Card */
+#total-patients-counter.patients-accent-card {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+    border: 2px solid #60a5fa !important;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35) !important;
+}
+
+#total-patients-counter.patients-accent-card .m-data h3,
+#total-patients-counter.patients-accent-card .m-data p,
+#total-patients-counter.patients-accent-card .m-icon i {
+    color: #ffffff !important;
+}

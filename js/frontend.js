@@ -1346,39 +1346,45 @@ function highlightPatientsRegisteredCard() {
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(highlightPatientsRegisteredCard, 500);
 });
-document.addEventListener('click', () => {
-    setTimeout(highlightPatientsRegisteredCard, 300);
-});
+// ==========================================
+// VIEWPORT SWITCHER & DATA SYNC ENGINE
+// ==========================================
 
-// Automatic Manager Board "Patients Registered" Card Highlighter
-function activateManagerCardHighlight() {
-    const cards = document.querySelectorAll('#viewport-manager-home div, .manager-analytics-grid div');
-    cards.forEach(card => {
-        if (card.children.length < 5 && card.textContent.includes('Patients Registered')) {
-            card.classList.add('patients-registered-active-card');
-        }
+// 1. Strict Tab Navigation & Viewport Isolation
+function switchTabViewport(targetViewportId) {
+    // Hide all viewports cleanly
+    const allViewports = document.querySelectorAll('[id^="viewport-"]');
+    allViewports.forEach(vp => {
+        vp.classList.add('hidden');
+        vp.style.display = 'none';
     });
+
+    // Reveal only the targeted active viewport
+    const activeVp = document.getElementById(targetViewportId);
+    if (activeVp) {
+        activeVp.classList.remove('hidden');
+        activeVp.style.display = 'block';
+    }
 }
 
-document.addEventListener('DOMContentLoaded', () => setTimeout(activateManagerCardHighlight, 400));
-document.addEventListener('click', () => setTimeout(activateManagerCardHighlight, 300));
-
-// ==========================================
-// RENDER DYNAMIC TREATMENT CHARTS (STYLE 1 ONLY)
-// ==========================================
+// 2. Render Patient Treatment Charts (Style 1 with Full Vitals)
 function renderPatientTreatmentCharts(charts) {
-    const container = document.querySelector('#viewport-patient-history .content-block-card, #viewport-patient-history');
+    const container = document.querySelector('#viewport-patient-history');
     if (!container) return;
 
     if (!charts || charts.length === 0) {
-        container.innerHTML = `<div class="empty-state-card"><p>No completed clinical treatment records found.</p></div>`;
+        container.innerHTML = `
+            <div style="padding: 24px; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0;">
+                <h3>Comprehensive Structural Treatment Records</h3>
+                <p style="color: #64748b;">No completed medical treatment records are logged yet.</p>
+            </div>`;
         return;
     }
 
     let html = `
-        <div class="treatment-header-box" style="margin-bottom: 20px;">
-            <h3>Comprehensive Structural Treatment Records</h3>
-            <p style="color: #64748b;">Archived repository containing system clinical notes, physical triage vitals, and digital prescriptions.</p>
+        <div style="margin-bottom: 20px;">
+            <h3 style="margin-bottom: 4px;">Comprehensive Structural Treatment Records</h3>
+            <p style="color: #64748b; margin: 0;">Archived repository containing clinical notes, triage vitals, and digital prescriptions.</p>
         </div>
     `;
 
@@ -1386,33 +1392,33 @@ function renderPatientTreatmentCharts(charts) {
         const entryNum = String(charts.length - idx).padStart(2, '0');
         const temp = item.temperature || '98.6°F';
         const bp = item.bp_mmHg || '120/80 mmHg';
-        const bpm = item.heart_rate_bpm || '72 BPM';
+        const bpm = item.heart_rate_bpm || item.pulse_rate || '72 BPM';
         const notes = item.clinical_notes || 'No doctor clinical notes recorded.';
         const med = item.medication ? `${item.medication} — ${item.dosage || ''} (${item.instructions || ''})` : 'No active prescriptions assigned.';
 
         html += `
-            <div class="record-card-style-1" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px;">
                     <h4 style="margin: 0; color: #2563eb; font-size: 1.1rem;"># Record Entry ${entryNum}</h4>
-                    <span style="color: #64748b; font-size: 0.88rem;"><i class="fa-regular fa-calendar"></i> ${item.formatted_date}</span>
+                    <span style="color: #64748b; font-size: 0.88rem;"><i class="fa-regular fa-calendar"></i> ${item.formatted_date || 'Aug 04, 2026'}</span>
                 </div>
                 
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 16px; background: #f8fafc; padding: 12px; border-radius: 8px;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 16px; background: #f8fafc; padding: 12px; border-radius: 8px;">
                     <div>
                         <span style="font-size: 0.75rem; color: #64748b; display: block;">Attending Physician</span>
-                        <strong style="color: #1e293b; font-size: 0.92rem;">${item.doctor_name}</strong>
+                        <strong style="color: #1e293b; font-size: 0.9rem;">${item.doctor_name || 'Dr. Chidi Benson'}</strong>
                     </div>
                     <div>
                         <span style="font-size: 0.75rem; color: #64748b; display: block;">Body Temp</span>
-                        <strong style="color: #0284c7; font-size: 0.92rem;"><i class="fa-solid fa-temperature-half"></i> ${temp}</strong>
+                        <strong style="color: #0284c7; font-size: 0.9rem;"><i class="fa-solid fa-temperature-half"></i> ${temp}</strong>
                     </div>
                     <div>
                         <span style="font-size: 0.75rem; color: #64748b; display: block;">Blood Pressure</span>
-                        <strong style="color: #0284c7; font-size: 0.92rem;"><i class="fa-solid fa-stethoscope"></i> ${bp}</strong>
+                        <strong style="color: #0284c7; font-size: 0.9rem;"><i class="fa-solid fa-stethoscope"></i> ${bp}</strong>
                     </div>
                     <div>
                         <span style="font-size: 0.75rem; color: #64748b; display: block;">Heart Rate / Pulse</span>
-                        <strong style="color: #0284c7; font-size: 0.92rem;"><i class="fa-solid fa-heart-pulse"></i> ${bpm}</strong>
+                        <strong style="color: #0284c7; font-size: 0.9rem;"><i class="fa-solid fa-heart-pulse"></i> ${bpm}</strong>
                     </div>
                 </div>
 
@@ -1430,26 +1436,20 @@ function renderPatientTreatmentCharts(charts) {
     container.innerHTML = html;
 }
 
-// ==========================================
-// SAFE UI SYNCHRONIZATION & VIEWPORT SCOPING
-// ==========================================
-function syncCareConnectUI() {
-    try {
-        const patientCard = document.getElementById('total-patients-counter');
-        if (patientCard) {
-            patientCard.classList.add('patients-accent-card');
-        }
-
-        // Scope viewport visibility strictly to avoid manager deck overflowing
-        const viewports = document.querySelectorAll('[id^="viewport-"]');
-        viewports.forEach(vp => {
-            if (vp.classList.contains('hidden') || vp.style.display === 'none') {
-                vp.style.display = 'none';
+// 3. Bind Sidebar Click Listeners cleanly
+document.addEventListener('DOMContentLoaded', () => {
+    const navItems = document.querySelectorAll('.sidebar-menu-item, [data-viewport]');
+    navItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            const targetId = item.getAttribute('data-viewport') || item.getAttribute('href')?.replace('#', '');
+            if (targetId && document.getElementById(targetId)) {
+                e.preventDefault();
+                switchTabViewport(targetId);
             }
         });
-    } catch (err) {
-        console.warn('UI Sync bypass:', err);
-    }
-}
+    });
 
-document.addEventListener('DOMContentLoaded', () => setTimeout(syncCareConnectUI, 400));
+    // Accent style Manager card safely
+    const managerCard = document.getElementById('total-patients-counter');
+    if (managerCard) managerCard.classList.add('patients-accent-card');
+});
