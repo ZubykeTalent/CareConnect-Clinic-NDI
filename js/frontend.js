@@ -1364,32 +1364,23 @@ document.addEventListener('DOMContentLoaded', () => setTimeout(activateManagerCa
 document.addEventListener('click', () => setTimeout(activateManagerCardHighlight, 300));
 
 // CareConnect UI Synchronization & Manager Accent Card Styler
+// CareConnect UI Synchronization & Manager Accent Card Styler
 function syncCareConnectUI() {
     // 1. Clean undefined greetings and bell badges
     document.body.innerHTML = document.body.innerHTML
         .replace(/Engine,\s*undefined!/g, 'Engine, Chisom Ada!')
         .replace(/undefined<\/span>/g, '5</span>');
 
-    // 2. Direct inline styling for Manager "Patients Registered" Card
-    const cardNodes = document.querySelectorAll('div');
-    cardNodes.forEach(node => {
-        if (node.children.length > 0 && node.children.length < 5 && node.innerText.includes('Patients Registered')) {
-            node.style.background = 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)';
-            node.style.border = '2px solid #60a5fa';
-            node.style.borderRadius = '12px';
-            node.style.boxShadow = '0 6px 20px rgba(37, 99, 235, 0.4)';
-            node.style.cursor = 'pointer';
-
-            Array.from(node.querySelectorAll('*')).forEach(child => {
-                child.style.color = '#ffffff';
-            });
-        }
-    });
-
-    // 3. Inject Treatment Cards if section container is visible but blank
-    const chartContainer = document.querySelector('#viewport-patient-history .content-block-card, #viewport-patient-history');
-    if (chartContainer && !chartContainer.innerText.includes('Dr. Chidi Benson')) {
-        const cardHTML = `
+    // 2. Safely attach class to target card without breaking outer containers
+    const patientCard = document.getElementById('total-patients-counter');
+    if (patientCard) {
+        patientCard.classList.add('patients-accent-card');
+    }
+}
+// 3. Inject Treatment Cards if section container is visible but blank
+const chartContainer = document.querySelector('#viewport-patient-history .content-block-card, #viewport-patient-history');
+if (chartContainer && !chartContainer.innerText.includes('Dr. Chidi Benson')) {
+    const cardHTML = `
             <div style="margin-top: 20px; padding: 20px; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                     <h4 style="margin: 0; color: #1e293b;">Clinical Encounter Record (#CC-08)</h4>
@@ -1403,8 +1394,8 @@ function syncCareConnectUI() {
                 <p style="color: #059669; font-size: 0.9rem; margin-top: 10px; font-weight: 600;"><strong>Active Prescription:</strong> Amoxicillin 500mg / Paracetamol (1 tablet every 8 hours after meals)</p>
             </div>
         `;
-        chartContainer.insertAdjacentHTML('beforeend', cardHTML);
-    }
+    chartContainer.insertAdjacentHTML('beforeend', cardHTML);
+}
 }
 
 // Attach triggers

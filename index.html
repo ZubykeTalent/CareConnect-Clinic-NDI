@@ -870,141 +870,140 @@
                 <!-- CHANGE THIS LINE (Line 945): -->
                 <div id="viewport-clinicmanager-home" class="dashboard-viewport hidden">
                     <div class="grid-4col metric-cards-strip">
-                        <div id="total-patients-counter" class="metric-card glassmorphism"
-                            style="cursor: pointer; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important; border: 2px solid #60a5fa !important; box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35) !important;">
-                            <div class="m-icon color-blue" style="background: rgba(255, 255, 255, 0.2) !important;"><i
-                                    class="fa-solid fa-users" style="color: #ffffff !important;"></i></div>
+                        <div id="total-patients-counter" class="metric-card glassmorphism patients-accent-card"
+                            style="cursor: pointer;">
+                            <div class="m-icon color-blue"><i class="fa-solid fa-users"></i></div>
                             <div class="m-data">
-                                <h3 id="m-stat-patients" style="color: #ffffff !important;">0</h3>
-                                <p style="color: #ffffff !important; font-weight: 600;">Patients Registered</p>
+                                <h3 id="m-stat-patients">0</h3>
+                                <p>Patients Registered</p>
                             </div>
                         </div>
                     </div>
-                    <div class="metric-card glassmorphism">
-                        <div class="m-icon color-green"><i class="fa-solid fa-calendar-check"></i></div>
-                        <div class="m-data">
-                            <h3 id="m-stat-completed">0</h3>
-                            <p>Completed Encounters</p>
-                        </div>
-                    </div>
-                    <div class="metric-card glassmorphism">
-                        <div class="m-icon color-red"><i class="fa-solid fa-calendar-xmark"></i></div>
-                        <div class="m-data">
-                            <h3 id="m-stat-cancelled">0</h3>
-                            <p>Cancelled Sessions</p>
-                        </div>
-                    </div>
-                    <div class="metric-card glassmorphism">
-                        <div class="m-icon color-gold"><i class="fa-solid fa-wave-square"></i></div>
-                        <div class="m-data">
-                            <h3>99.9%</h3>
-                            <p>System Cluster Health</p>
-                        </div>
+                </div>
+                <div class="metric-card glassmorphism">
+                    <div class="m-icon color-green"><i class="fa-solid fa-calendar-check"></i></div>
+                    <div class="m-data">
+                        <h3 id="m-stat-completed">0</h3>
+                        <p>Completed Encounters</p>
                     </div>
                 </div>
-                <!-- The patient records table will render inside here when the counter is clicked -->
-                <div id="records-display-panel" style="display: none; margin-top: 25px;"></div>
-
-                <div class="grid-2col dashboard-layout-main-grid mt-4">
-                    <div class="content-block-card glassmorphism">
-                        <h3>Analytics Engine: Doctor Service Utilization Metrics</h3>
-                        <p class="description-text">Consolidated utilization index mapping completed diagnostic
-                            appointment matrices against employee allocation limits.</p>
-
-                        <!-- Pure Custom SVG/HTML Chart Framework Component -->
-                        <div class="custom-analytics-chart-container" id="manager-chart-bars-container">
-                            <!-- Bars rendered programmatically by the UI execution logic -->
-                        </div>
+                <div class="metric-card glassmorphism">
+                    <div class="m-icon color-red"><i class="fa-solid fa-calendar-xmark"></i></div>
+                    <div class="m-data">
+                        <h3 id="m-stat-cancelled">0</h3>
+                        <p>Cancelled Sessions</p>
                     </div>
-
-                    <div class="content-block-card glassmorphism">
-                        <h3>System Administration Operations & Execution Exports</h3>
-                        <p class="description-text">Trigger enterprise data extractions or pipeline diagnostic
-                            commands.</p>
-                        <div class="management-buttons-stack mt-4">
-                            <button class="btn btn-outline btn-lg" id="manager-export-pdf-btn"><i
-                                    class="fa-solid fa-file-pdf"></i> Compile Comprehensive Clinical Activity
-                                Summary (PDF-Print Template)</button>
-                            <button class="btn btn-outline btn-lg" id="manager-system-audit-btn"><i
-                                    class="fa-solid fa-terminal"></i> Query System Cryptographic Audit Tracking Data
-                                Stream</button>
-                        </div>
-
-                        <div class="audit-stream-shell-output hidden mt-3" id="manager-audit-shell">
-                            <h6>[SYSTEM INTEGRITY SECURITY MONITOR OUTPUT LOG]</h6>
-                            <pre id="audit-log-pre-block">Awaiting analytical inspection request parameters...</pre>
-                        </div>
+                </div>
+                <div class="metric-card glassmorphism">
+                    <div class="m-icon color-gold"><i class="fa-solid fa-wave-square"></i></div>
+                    <div class="m-data">
+                        <h3>99.9%</h3>
+                        <p>System Cluster Health</p>
                     </div>
                 </div>
             </div>
+            <!-- The patient records table will render inside here when the counter is clicked -->
+            <div id="records-display-panel" style="display: none; margin-top: 25px;"></div>
+
+            <div class="grid-2col dashboard-layout-main-grid mt-4">
+                <div class="content-block-card glassmorphism">
+                    <h3>Analytics Engine: Doctor Service Utilization Metrics</h3>
+                    <p class="description-text">Consolidated utilization index mapping completed diagnostic
+                        appointment matrices against employee allocation limits.</p>
+
+                    <!-- Pure Custom SVG/HTML Chart Framework Component -->
+                    <div class="custom-analytics-chart-container" id="manager-chart-bars-container">
+                        <!-- Bars rendered programmatically by the UI execution logic -->
+                    </div>
+                </div>
+
+                <div class="content-block-card glassmorphism">
+                    <h3>System Administration Operations & Execution Exports</h3>
+                    <p class="description-text">Trigger enterprise data extractions or pipeline diagnostic
+                        commands.</p>
+                    <div class="management-buttons-stack mt-4">
+                        <button class="btn btn-outline btn-lg" id="manager-export-pdf-btn"><i
+                                class="fa-solid fa-file-pdf"></i> Compile Comprehensive Clinical Activity
+                            Summary (PDF-Print Template)</button>
+                        <button class="btn btn-outline btn-lg" id="manager-system-audit-btn"><i
+                                class="fa-solid fa-terminal"></i> Query System Cryptographic Audit Tracking Data
+                            Stream</button>
+                    </div>
+
+                    <div class="audit-stream-shell-output hidden mt-3" id="manager-audit-shell">
+                        <h6>[SYSTEM INTEGRITY SECURITY MONITOR OUTPUT LOG]</h6>
+                        <pre id="audit-log-pre-block">Awaiting analytical inspection request parameters...</pre>
+                    </div>
+                </div>
+            </div>
+    </div>
 
 
-            <!-- ==========================================
+    <!-- ==========================================
                      COMMON PANE MODULES: PROFILE & SETTINGS
                      ========================================== -->
-            <div id="viewport-common-profile" class="dashboard-viewport hidden">
-                <div class="content-block-card glassmorphism max-width-800">
-                    <h3>Modify Personal System Profile Data</h3>
-                    <form id="common-profile-update-form" class="modern-form mt-3">
-                        <div class="form-group">
-                            <label>Full Verified Legal Name</label>
-                            <input type="text" id="prof-name" class="form-control" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Digital Communication Email (Primary Identity Token)</label>
-                            <input type="email" id="prof-email" class="form-control" readonly disabled>
-                            <small class="text-muted-compact">Email mutation configurations require higher root
-                                system administrator override validations.</small>
-                        </div>
-                        <div class="form-group">
-                            <label>Active Direct Telephone Contact Line</label>
-                            <input type="tel" id="prof-phone" class="form-control" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Physical Residential Coordinate Address</label>
-                            <input type="text" id="prof-address" class="form-control" required>
-                        </div>
-                        <div class="form-group" id="prof-medical-history-group">
-                            <label>Medical History Context Summary (Read-Only Archive Container)</label>
-                            <textarea id="prof-medical-summary" class="form-control" rows="3" readonly
-                                disabled></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Commit Dynamic Data Profile Changes</button>
-                    </form>
+    <div id="viewport-common-profile" class="dashboard-viewport hidden">
+        <div class="content-block-card glassmorphism max-width-800">
+            <h3>Modify Personal System Profile Data</h3>
+            <form id="common-profile-update-form" class="modern-form mt-3">
+                <div class="form-group">
+                    <label>Full Verified Legal Name</label>
+                    <input type="text" id="prof-name" class="form-control" required>
                 </div>
-            </div>
+                <div class="form-group">
+                    <label>Digital Communication Email (Primary Identity Token)</label>
+                    <input type="email" id="prof-email" class="form-control" readonly disabled>
+                    <small class="text-muted-compact">Email mutation configurations require higher root
+                        system administrator override validations.</small>
+                </div>
+                <div class="form-group">
+                    <label>Active Direct Telephone Contact Line</label>
+                    <input type="tel" id="prof-phone" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Physical Residential Coordinate Address</label>
+                    <input type="text" id="prof-address" class="form-control" required>
+                </div>
+                <div class="form-group" id="prof-medical-history-group">
+                    <label>Medical History Context Summary (Read-Only Archive Container)</label>
+                    <textarea id="prof-medical-summary" class="form-control" rows="3" readonly disabled></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Commit Dynamic Data Profile Changes</button>
+            </form>
+        </div>
+    </div>
 
-            <div id="viewport-common-settings" class="dashboard-viewport hidden">
-                <div class="content-block-card glassmorphism max-width-800">
-                    <h3>System Configuration & Settings Layout</h3>
-                    <p class="description-text">Manage regional time constraints, dark user interface tracking
-                        parameters, and local data nodes configuration.</p>
-                    <hr class="divider-line">
-                    <div class="setting-toggle-row mt-3">
-                        <div>
-                            <h4>High Concurrency Dark Interface Layout</h4>
-                            <p class="text-muted-compact">Converts high luminance viewport components to low
-                                radiation dark pixels.</p>
-                        </div>
-                        <label class="switch-toggle-component">
-                            <input type="checkbox" id="settings-dark-mode-checkbox">
-                            <span class="slider-round-element"></span>
-                        </label>
-                    </div>
-                    <hr class="divider-line">
-                    <div class="setting-toggle-row">
-                        <div>
-                            <h4>Transactional Alerts Dispatch Engine</h4>
-                            <p class="text-muted-compact">Routes SMS and automated system background dispatches for
-                                diagnostic event updates.</p>
-                        </div>
-                        <label class="switch-toggle-component">
-                            <input type="checkbox" checked disabled>
-                            <span class="slider-round-element"></span>
-                        </label>
-                    </div>
+    <div id="viewport-common-settings" class="dashboard-viewport hidden">
+        <div class="content-block-card glassmorphism max-width-800">
+            <h3>System Configuration & Settings Layout</h3>
+            <p class="description-text">Manage regional time constraints, dark user interface tracking
+                parameters, and local data nodes configuration.</p>
+            <hr class="divider-line">
+            <div class="setting-toggle-row mt-3">
+                <div>
+                    <h4>High Concurrency Dark Interface Layout</h4>
+                    <p class="text-muted-compact">Converts high luminance viewport components to low
+                        radiation dark pixels.</p>
                 </div>
+                <label class="switch-toggle-component">
+                    <input type="checkbox" id="settings-dark-mode-checkbox">
+                    <span class="slider-round-element"></span>
+                </label>
             </div>
+            <hr class="divider-line">
+            <div class="setting-toggle-row">
+                <div>
+                    <h4>Transactional Alerts Dispatch Engine</h4>
+                    <p class="text-muted-compact">Routes SMS and automated system background dispatches for
+                        diagnostic event updates.</p>
+                </div>
+                <label class="switch-toggle-component">
+                    <input type="checkbox" checked disabled>
+                    <span class="slider-round-element"></span>
+                </label>
+            </div>
+        </div>
+    </div>
 
     </div>
     </main>
