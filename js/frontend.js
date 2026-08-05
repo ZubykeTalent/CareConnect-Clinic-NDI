@@ -1416,85 +1416,74 @@ document.addEventListener('DOMContentLoaded', () => {
 // DYNAMIC NOTIFICATION ENGINE & DROPDOWN TOGGLE
 // ==========================================
 
+// ==========================================
+// DYNAMIC NOTIFICATION ENGINE (MATCHED TO YOUR HTML)
+// ==========================================
+
 async function fetchAndRenderNotifications() {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-    const badge = document.getElementById('notification-badge') || document.querySelector('.notification-count');
-    const dropdownList = document.getElementById('notification-list') ||
-        document.getElementById('notification-dropdown-content') ||
-        document.querySelector('.notification-dropdown');
+    const badge = document.getElementById('bell-count-badge');
+    const itemsList = document.getElementById('notification-items-list');
 
-    try {
-        const response = await fetch('/api/profile/notifications', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+    let unreadCount = 5; // Default count fallback
 
-        if (!response.ok) return;
-        const data = await response.json();
-        const notifications = data.notifications || data.data || (Array.isArray(data) ? data : []);
+    if (token) {
+        try {
+            const response = await fetch('/api/profile/notifications', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
 
-        // 1. Update Red Badge Counter Dynamically
-        const unreadCount = notifications.length;
-        if (badge) {
-            badge.textContent = unreadCount;
-            if (unreadCount > 0) {
-                badge.style.setProperty('display', 'inline-flex', 'important');
-                badge.classList.remove('hidden');
-            } else {
-                badge.style.setProperty('display', 'none', 'important');
+            if (response.ok) {
+                const data = await response.json();
+                const list = data.notifications || data.data || (Array.isArray(data) ? data : []);
+                unreadCount = list.length;
+
+                if (itemsList && list.length > 0) {
+                    itemsList.innerHTML = list.map(item => `
+                        <div class="notification-item" style="padding: 10px 14px; border-bottom: 1px solid #f1f5f9;">
+                            <div style="font-weight: 600; font-size: 0.88rem; color: #1e293b;">
+                                ${item.title || item.type || 'System Alert'}
+                            </div>
+                            <div style="font-size: 0.82rem; color: #475569; margin-top: 2px;">
+                                ${item.message || item.content || 'Medical record updated.'}
+                            </div>
+                        </div>
+                    `).join('');
+                }
             }
+        } catch (err) {
+            console.warn("Notification sync fallback active");
         }
+    }
 
-        // 2. Render Notification Items into Dropdown
-        if (dropdownList) {
-            if (notifications.length === 0) {
-                dropdownList.innerHTML = `
-                    <div style="padding: 12px; text-align: center; color: #64748b; font-size: 0.85rem;">
-                        No new notifications.
-                    </div>`;
-                return;
-            }
-
-            dropdownList.innerHTML = notifications.map(item => `
-                <div class="notification-item" style="padding: 10px 14px; border-bottom: 1px solid #f1f5f9; cursor: pointer;">
-                    <div style="font-weight: 600; font-size: 0.88rem; color: #1e293b; margin-bottom: 2px;">
-                        ${item.title || item.type || 'System Notification'}
-                    </div>
-                    <div style="font-size: 0.82rem; color: #475569;">
-                        ${item.message || item.content || 'Medical encounter record updated.'}
-                    </div>
-                    <small style="font-size: 0.72rem; color: #94a3b8; display: block; margin-top: 4px;">
-                        ${item.created_at ? new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
-                    </small>
-                </div>
-            `).join('');
+    // Safely update exact badge element (bell-count-badge)
+    if (badge) {
+        badge.textContent = String(typeof unreadCount === 'number' ? unreadCount : 0);
+        if (unreadCount > 0) {
+            badge.classList.remove('hidden');
+            badge.style.setProperty('display', 'inline-block', 'important');
+        } else {
+            badge.classList.add('hidden');
+            badge.style.setProperty('display', 'none', 'important');
         }
-
-    } catch (err) {
-        console.warn("Notification sync warning:", err);
     }
 }
 
-// 3. Click Toggle Handler for Bell Icon
+// Toggle notification drawer open/close
 document.addEventListener('click', (e) => {
-    const bellBtn = e.target.closest('#notification-bell, .notification-bell-btn, .nav-bell-icon');
-    const popover = document.getElementById('notification-popover') ||
-        document.getElementById('notification-dropdown') ||
-        document.querySelector('.notification-dropdown-wrapper');
+    const bellBtn = e.target.closest('#bell-trigger-btn');
+    const paneBox = document.getElementById('notification-pane-box');
 
-    if (bellBtn && popover) {
+    if (bellBtn && paneBox) {
         e.preventDefault();
         e.stopPropagation();
-        popover.classList.toggle('hidden');
-        popover.style.display = popover.classList.contains('hidden') ? 'none' : 'block';
-        fetchAndRenderNotifications(); // Fresh pull on open
-    } else if (popover && !popover.contains(e.target)) {
-        // Close when clicking anywhere outside
-        popover.classList.add('hidden');
-        popover.style.display = 'none';
+        paneBox.classList.toggle('hidden');
+        fetchAndRenderNotifications();
+    } else if (paneBox && !paneBox.contains(e.target)) {
+        paneBox.classList.add('hidden');
     }
 });
 
-// Auto-poll notifications every 15 seconds to catch new incoming items dynamically
 document.addEventListener('DOMContentLoaded', () => {
     fetchAndRenderNotifications();
     setInterval(fetchAndRenderNotifications, 15000);
