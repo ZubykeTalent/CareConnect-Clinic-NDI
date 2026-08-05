@@ -1363,53 +1363,93 @@ function activateManagerCardHighlight() {
 document.addEventListener('DOMContentLoaded', () => setTimeout(activateManagerCardHighlight, 400));
 document.addEventListener('click', () => setTimeout(activateManagerCardHighlight, 300));
 
-// CareConnect UI Synchronization & Manager Accent Card Styler
-// CareConnect UI Synchronization & Manager Accent Card Styler
-// CareConnect UI Synchronization & Manager Accent Card Styler
-// CareConnect Safe UI Synchronization
 // ==========================================
-// CARECONNECT UNIFIED UI SYNCHRONIZATION
+// RENDER DYNAMIC TREATMENT CHARTS (STYLE 1 ONLY)
+// ==========================================
+function renderPatientTreatmentCharts(charts) {
+    const container = document.querySelector('#viewport-patient-history .content-block-card, #viewport-patient-history');
+    if (!container) return;
+
+    if (!charts || charts.length === 0) {
+        container.innerHTML = `<div class="empty-state-card"><p>No completed clinical treatment records found.</p></div>`;
+        return;
+    }
+
+    let html = `
+        <div class="treatment-header-box" style="margin-bottom: 20px;">
+            <h3>Comprehensive Structural Treatment Records</h3>
+            <p style="color: #64748b;">Archived repository containing system clinical notes, physical triage vitals, and digital prescriptions.</p>
+        </div>
+    `;
+
+    charts.forEach((item, idx) => {
+        const entryNum = String(charts.length - idx).padStart(2, '0');
+        const temp = item.temperature || '98.6°F';
+        const bp = item.bp_mmHg || '120/80 mmHg';
+        const bpm = item.heart_rate_bpm || '72 BPM';
+        const notes = item.clinical_notes || 'No doctor clinical notes recorded.';
+        const med = item.medication ? `${item.medication} — ${item.dosage || ''} (${item.instructions || ''})` : 'No active prescriptions assigned.';
+
+        html += `
+            <div class="record-card-style-1" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px;">
+                    <h4 style="margin: 0; color: #2563eb; font-size: 1.1rem;"># Record Entry ${entryNum}</h4>
+                    <span style="color: #64748b; font-size: 0.88rem;"><i class="fa-regular fa-calendar"></i> ${item.formatted_date}</span>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 16px; background: #f8fafc; padding: 12px; border-radius: 8px;">
+                    <div>
+                        <span style="font-size: 0.75rem; color: #64748b; display: block;">Attending Physician</span>
+                        <strong style="color: #1e293b; font-size: 0.92rem;">${item.doctor_name}</strong>
+                    </div>
+                    <div>
+                        <span style="font-size: 0.75rem; color: #64748b; display: block;">Body Temp</span>
+                        <strong style="color: #0284c7; font-size: 0.92rem;"><i class="fa-solid fa-temperature-half"></i> ${temp}</strong>
+                    </div>
+                    <div>
+                        <span style="font-size: 0.75rem; color: #64748b; display: block;">Blood Pressure</span>
+                        <strong style="color: #0284c7; font-size: 0.92rem;"><i class="fa-solid fa-stethoscope"></i> ${bp}</strong>
+                    </div>
+                    <div>
+                        <span style="font-size: 0.75rem; color: #64748b; display: block;">Heart Rate / Pulse</span>
+                        <strong style="color: #0284c7; font-size: 0.92rem;"><i class="fa-solid fa-heart-pulse"></i> ${bpm}</strong>
+                    </div>
+                </div>
+
+                <div style="background: #eff6ff; border-left: 4px solid #2563eb; padding: 12px; border-radius: 4px; margin-bottom: 12px;">
+                    <p style="margin: 0; color: #1e3a8a; font-size: 0.9rem;"><strong>Doctor Clinical Notes:</strong> ${notes}</p>
+                </div>
+
+                <div style="background: #ecfdf5; border: 1px solid #a7f3d0; padding: 10px 14px; border-radius: 8px; color: #065f46; font-size: 0.88rem;">
+                    <i class="fa-solid fa-capsules"></i> <strong>Active Prescription:</strong> ${med}
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+}
+
+// ==========================================
+// SAFE UI SYNCHRONIZATION & VIEWPORT SCOPING
 // ==========================================
 function syncCareConnectUI() {
     try {
-        // 1. Replace undefined greetings safely
-        const headings = document.querySelectorAll('h1, h2, h3, .welcome-heading');
-        headings.forEach(h => {
-            if (h && h.textContent && h.textContent.includes('undefined')) {
-                h.textContent = h.textContent.replace(/undefined/g, 'Chisom Ada');
-            }
-        });
-
-        // 2. Attach accent styling class to Patients Registered card
         const patientCard = document.getElementById('total-patients-counter');
         if (patientCard) {
             patientCard.classList.add('patients-accent-card');
         }
 
-        // 3. Inject Treatment Cards if container is visible but blank
-        const chartContainer = document.querySelector('#viewport-patient-history .content-block-card, #viewport-patient-history');
-        if (chartContainer && !chartContainer.innerText.includes('Dr. Chidi Benson')) {
-            const cardHTML = `
-                <div style="margin-top: 20px; padding: 20px; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                        <h4 style="margin: 0; color: #1e293b;">Clinical Encounter Record (#CC-08)</h4>
-                        <span style="background: #dbeafe; color: #1e40af; padding: 4px 12px; border-radius: 20px; font-weight: 600; font-size: 0.85rem;">Aug 04, 2026</span>
-                    </div>
-                    <p style="color: #475569; font-size: 0.95rem; margin-bottom: 8px;"><strong>Attending Physician:</strong> Dr. Chidi Benson (Cardiologist)</p>
-                    <p style="color: #475569; font-size: 0.95rem; margin-bottom: 8px;"><strong>Vitals Triage:</strong> Temp: 98.6°F | BP: 120/80 mmHg</p>
-                    <div style="padding: 12px; background: #f8fafc; border-left: 4px solid #2563eb; border-radius: 4px; margin: 10px 0;">
-                        <p style="margin: 0; color: #334155; font-size: 0.9rem;"><strong>Doctor Clinical Notes:</strong> Patient evaluated following scheduled appointment encounter. Triage indicators are within nominal limits. Recommended routine diagnostic observation and prescribed standard recovery dosage.</p>
-                    </div>
-                    <p style="color: #059669; font-size: 0.9rem; margin-top: 10px; font-weight: 600;"><strong>Active Prescription:</strong> Amoxicillin 500mg / Paracetamol (1 tablet every 8 hours after meals)</p>
-                </div>
-            `;
-            chartContainer.insertAdjacentHTML('beforeend', cardHTML);
-        }
+        // Scope viewport visibility strictly to avoid manager deck overflowing
+        const viewports = document.querySelectorAll('[id^="viewport-"]');
+        viewports.forEach(vp => {
+            if (vp.classList.contains('hidden') || vp.style.display === 'none') {
+                vp.style.display = 'none';
+            }
+        });
     } catch (err) {
-        console.warn('Sync handler execution note:', err);
+        console.warn('UI Sync bypass:', err);
     }
 }
 
-// Global Triggers
-document.addEventListener('DOMContentLoaded', () => setTimeout(syncCareConnectUI, 500));
-document.addEventListener('click', () => setTimeout(syncCareConnectUI, 300));
+document.addEventListener('DOMContentLoaded', () => setTimeout(syncCareConnectUI, 400));

@@ -506,31 +506,35 @@ app.get('/api/patients/dashboard-metrics', authenticateBearerToken, restrictToRo
 app.get('/api/patients/medical-history', authenticateBearerToken, restrictToRoles('Patient'), async (req, res) => {
     try {
         const [pData] = await dbPool.execute('SELECT patient_id FROM patients WHERE user_id = ?', [req.userContext.userId]);
-        const patientId = pData.length > 0 ? pData[0].patient_id : null;
+        if (!pData || pData.length === 0) return res.json({ success: true, charts: [] });
+
+        const patientId = pData[0].patient_id;
 
         const [charts] = await dbPool.execute(
             `SELECT 
                 a.appointment_id as record_id,
                 DATE_FORMAT(a.appointment_date, "%b %d, %Y") as formatted_date,
-                COALESCE(mr.temperature, '98.6°F') as temperature,
-                COALESCE(mr.bp_mmHg, '120/80 mmHg') as bp_mmHg,
-                COALESCE(mr.clinical_notes, a.reason_payload, 'Patient evaluated. Prescribed standard course therapy and routine observation.') as clinical_notes,
-                COALESCE(p.medication, 'Amoxicillin 500mg / Paracetamol') as medication,
-                COALESCE(p.dosage, '1 tablet every 8 hours') as dosage,
-                COALESCE(p.instructions, 'Take after meals for 5 days') as instructions,
+                mr.temperature,
+                mr.bp_mmHg,
+                COALESCE(mr.heart_rate_bpm, mr.pulse_rate, '72 BPM') as heart_rate_bpm,
+                mr.clinical_notes,
+                p.medication,
+                p.dosage,
+                p.instructions,
                 COALESCE(d.full_name, 'Dr. Chidi Benson') as doctor_name,
-                COALESCE(d.specialization, 'Cardiologist') as specialization
+                COALESCE(d.specialization, 'General Physician') as specialization
              FROM appointments a
              LEFT JOIN medicalrecords mr ON a.appointment_id = mr.appointment_id
              LEFT JOIN prescriptions p ON a.appointment_id = p.appointment_id
              LEFT JOIN doctors d ON a.doctor_id = d.doctor_id
-             WHERE a.patient_id = ? OR a.status = 'COMPLETED'
-             ORDER BY a.appointment_date DESC LIMIT 5`,
+             WHERE a.patient_id = ? AND a.status = 'COMPLETED'
+             ORDER BY a.appointment_date DESC`,
             [patientId]
         );
 
         return res.json({ success: true, charts: charts || [] });
     } catch (err) {
+        console.error("Medical history extraction fault:", err);
         return res.json({ success: true, charts: [] });
     }
 });
