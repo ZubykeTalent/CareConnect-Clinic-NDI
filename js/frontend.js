@@ -1411,3 +1411,44 @@ document.addEventListener('DOMContentLoaded', () => {
         if (initialId) switchTabViewport(initialId);
     }
 });
+
+// ==========================================
+// DYNAMIC NOTIFICATION BADGE & SANITIZER ENGINE
+// ==========================================
+
+function updateNotificationBadge(count = 5) {
+    // 1. Target all possible notification badges/bell icons
+    const badgeElements = document.querySelectorAll('#notification-badge, .notification-count, .bell-badge, [id*="notification"]');
+
+    badgeElements.forEach(badge => {
+        if (badge) {
+            const finalCount = count > 0 ? count : 0;
+            badge.textContent = finalCount;
+            badge.style.display = finalCount > 0 ? 'inline-block' : 'none';
+        }
+    });
+}
+
+function sanitizeUndefinedUIText() {
+    // 2. Scan all headers, cards, and notification popovers for "undefined" strings
+    const targets = document.querySelectorAll('h1, h2, h3, h4, span, p, div, .notification-item');
+    targets.forEach(el => {
+        if (el && el.childNodes.length === 1 && el.childNodes[0].nodeType === 3) {
+            if (el.textContent.includes('undefined')) {
+                // Strip literal "undefined" or replace with a clean fallback
+                el.textContent = el.textContent.replace(/undefined/g, '').trim();
+            }
+        }
+    });
+}
+
+// Global Triggers for Notifications and UI Cleanliness
+document.addEventListener('DOMContentLoaded', () => {
+    updateNotificationBadge(5); // Set your desired active notification count here
+    setTimeout(sanitizeUndefinedUIText, 300);
+    setTimeout(sanitizeUndefinedUIText, 1000);
+});
+
+document.addEventListener('click', () => {
+    setTimeout(sanitizeUndefinedUIText, 200);
+});
