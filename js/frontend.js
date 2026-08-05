@@ -1347,109 +1347,67 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(highlightPatientsRegisteredCard, 500);
 });
 // ==========================================
-// VIEWPORT SWITCHER & DATA SYNC ENGINE
+// STRICT VIEWPORT ROUTING & TAB ISOLATION
 // ==========================================
 
-// 1. Strict Tab Navigation & Viewport Isolation
 function switchTabViewport(targetViewportId) {
-    // Hide all viewports cleanly
-    const allViewports = document.querySelectorAll('[id^="viewport-"]');
+    if (!targetViewportId) return;
+
+    // Clean target ID string
+    const cleanId = targetViewportId.replace('#', '');
+
+    // 1. Target all possible viewport containers
+    const allViewports = document.querySelectorAll('[id^="viewport-"], .dashboard-viewport, .viewport-section');
+
+    // 2. Force hide every single viewport on the page
     allViewports.forEach(vp => {
         vp.classList.add('hidden');
-        vp.style.display = 'none';
+        vp.setAttribute('aria-hidden', 'true');
+        vp.style.setProperty('display', 'none', 'important');
     });
 
-    // Reveal only the targeted active viewport
-    const activeVp = document.getElementById(targetViewportId);
-    if (activeVp) {
-        activeVp.classList.remove('hidden');
-        activeVp.style.display = 'block';
+    // 3. Locate and reveal strictly the selected viewport
+    const targetVp = document.getElementById(cleanId) || document.querySelector(`[data-viewport="${cleanId}"]`);
+
+    if (targetVp) {
+        targetVp.classList.remove('hidden');
+        targetVp.removeAttribute('aria-hidden');
+        targetVp.style.setProperty('display', 'block', 'important');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 }
 
-// 2. Render Patient Treatment Charts (Style 1 with Full Vitals)
-function renderPatientTreatmentCharts(charts) {
-    const container = document.querySelector('#viewport-patient-history');
-    if (!container) return;
+// Global click delegation for all sidebar links & menu items
+document.addEventListener('click', (e) => {
+    const navLink = e.target.closest('[data-viewport], .sidebar-menu-item, a[href^="#viewport-"]');
+    if (!navLink) return;
 
-    if (!charts || charts.length === 0) {
-        container.innerHTML = `
-            <div style="padding: 24px; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0;">
-                <h3>Comprehensive Structural Treatment Records</h3>
-                <p style="color: #64748b;">No completed medical treatment records are logged yet.</p>
-            </div>`;
-        return;
-    }
+    const targetId = navLink.getAttribute('data-viewport') ||
+        navLink.getAttribute('href') ||
+        navLink.dataset.target;
 
-    let html = `
-        <div style="margin-bottom: 20px;">
-            <h3 style="margin-bottom: 4px;">Comprehensive Structural Treatment Records</h3>
-            <p style="color: #64748b; margin: 0;">Archived repository containing clinical notes, triage vitals, and digital prescriptions.</p>
-        </div>
-    `;
+    if (targetId && targetId.includes('viewport-')) {
+        e.preventDefault();
+        e.stopPropagation();
 
-    charts.forEach((item, idx) => {
-        const entryNum = String(charts.length - idx).padStart(2, '0');
-        const temp = item.temperature || '98.6°F';
-        const bp = item.bp_mmHg || '120/80 mmHg';
-        const bpm = item.heart_rate_bpm || item.pulse_rate || '72 BPM';
-        const notes = item.clinical_notes || 'No doctor clinical notes recorded.';
-        const med = item.medication ? `${item.medication} — ${item.dosage || ''} (${item.instructions || ''})` : 'No active prescriptions assigned.';
-
-        html += `
-            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px;">
-                    <h4 style="margin: 0; color: #2563eb; font-size: 1.1rem;"># Record Entry ${entryNum}</h4>
-                    <span style="color: #64748b; font-size: 0.88rem;"><i class="fa-regular fa-calendar"></i> ${item.formatted_date || 'Aug 04, 2026'}</span>
-                </div>
-                
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 16px; background: #f8fafc; padding: 12px; border-radius: 8px;">
-                    <div>
-                        <span style="font-size: 0.75rem; color: #64748b; display: block;">Attending Physician</span>
-                        <strong style="color: #1e293b; font-size: 0.9rem;">${item.doctor_name || 'Dr. Chidi Benson'}</strong>
-                    </div>
-                    <div>
-                        <span style="font-size: 0.75rem; color: #64748b; display: block;">Body Temp</span>
-                        <strong style="color: #0284c7; font-size: 0.9rem;"><i class="fa-solid fa-temperature-half"></i> ${temp}</strong>
-                    </div>
-                    <div>
-                        <span style="font-size: 0.75rem; color: #64748b; display: block;">Blood Pressure</span>
-                        <strong style="color: #0284c7; font-size: 0.9rem;"><i class="fa-solid fa-stethoscope"></i> ${bp}</strong>
-                    </div>
-                    <div>
-                        <span style="font-size: 0.75rem; color: #64748b; display: block;">Heart Rate / Pulse</span>
-                        <strong style="color: #0284c7; font-size: 0.9rem;"><i class="fa-solid fa-heart-pulse"></i> ${bpm}</strong>
-                    </div>
-                </div>
-
-                <div style="background: #eff6ff; border-left: 4px solid #2563eb; padding: 12px; border-radius: 4px; margin-bottom: 12px;">
-                    <p style="margin: 0; color: #1e3a8a; font-size: 0.9rem;"><strong>Doctor Clinical Notes:</strong> ${notes}</p>
-                </div>
-
-                <div style="background: #ecfdf5; border: 1px solid #a7f3d0; padding: 10px 14px; border-radius: 8px; color: #065f46; font-size: 0.88rem;">
-                    <i class="fa-solid fa-capsules"></i> <strong>Active Prescription:</strong> ${med}
-                </div>
-            </div>
-        `;
-    });
-
-    container.innerHTML = html;
-}
-
-// 3. Bind Sidebar Click Listeners cleanly
-document.addEventListener('DOMContentLoaded', () => {
-    const navItems = document.querySelectorAll('.sidebar-menu-item, [data-viewport]');
-    navItems.forEach(item => {
-        item.addEventListener('click', (e) => {
-            const targetId = item.getAttribute('data-viewport') || item.getAttribute('href')?.replace('#', '');
-            if (targetId && document.getElementById(targetId)) {
-                e.preventDefault();
-                switchTabViewport(targetId);
-            }
+        // Remove active highlights from other sidebar buttons
+        document.querySelectorAll('.sidebar-menu-item, [data-viewport]').forEach(btn => {
+            btn.classList.remove('active', 'selected');
         });
-    });
 
-    // Accent style Manager card safely
-    const managerCard = document.getElementById('total-patients-counter');
-    if (managerCard) managerCard.classList.add('patients-accent-card');
+        // Highlight clicked link
+        navLink.classList.add('active');
+
+        // Switch viewport view cleanly
+        switchTabViewport(targetId);
+    }
+});
+
+// Run isolation sync on initial page load
+document.addEventListener('DOMContentLoaded', () => {
+    const activeTab = document.querySelector('.sidebar-menu-item.active') || document.querySelector('[data-viewport]');
+    if (activeTab) {
+        const initialId = activeTab.getAttribute('data-viewport') || activeTab.getAttribute('href');
+        if (initialId) switchTabViewport(initialId);
+    }
 });
