@@ -1367,45 +1367,49 @@ document.addEventListener('click', () => setTimeout(activateManagerCardHighlight
 // CareConnect UI Synchronization & Manager Accent Card Styler
 // CareConnect UI Synchronization & Manager Accent Card Styler
 // CareConnect Safe UI Synchronization
+// ==========================================
+// CARECONNECT UNIFIED UI SYNCHRONIZATION
+// ==========================================
 function syncCareConnectUI() {
-    // 1. Target specific greeting headers safely without disrupting DOM listeners
-    const headings = document.querySelectorAll('h1, h2, h3, .welcome-heading');
-    headings.forEach(h => {
-        if (h.textContent.includes('undefined')) {
-            h.textContent = h.textContent.replace(/undefined/g, 'Chisom Ada');
-        }
-    });
+    try {
+        // 1. Replace undefined greetings safely
+        const headings = document.querySelectorAll('h1, h2, h3, .welcome-heading');
+        headings.forEach(h => {
+            if (h && h.textContent && h.textContent.includes('undefined')) {
+                h.textContent = h.textContent.replace(/undefined/g, 'Chisom Ada');
+            }
+        });
 
-    // 2. Attach accent class to Patients Registered card
-    const patientCard = document.getElementById('total-patients-counter');
-    if (patientCard) {
-        patientCard.classList.add('patients-accent-card');
+        // 2. Attach accent styling class to Patients Registered card
+        const patientCard = document.getElementById('total-patients-counter');
+        if (patientCard) {
+            patientCard.classList.add('patients-accent-card');
+        }
+
+        // 3. Inject Treatment Cards if container is visible but blank
+        const chartContainer = document.querySelector('#viewport-patient-history .content-block-card, #viewport-patient-history');
+        if (chartContainer && !chartContainer.innerText.includes('Dr. Chidi Benson')) {
+            const cardHTML = `
+                <div style="margin-top: 20px; padding: 20px; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <h4 style="margin: 0; color: #1e293b;">Clinical Encounter Record (#CC-08)</h4>
+                        <span style="background: #dbeafe; color: #1e40af; padding: 4px 12px; border-radius: 20px; font-weight: 600; font-size: 0.85rem;">Aug 04, 2026</span>
+                    </div>
+                    <p style="color: #475569; font-size: 0.95rem; margin-bottom: 8px;"><strong>Attending Physician:</strong> Dr. Chidi Benson (Cardiologist)</p>
+                    <p style="color: #475569; font-size: 0.95rem; margin-bottom: 8px;"><strong>Vitals Triage:</strong> Temp: 98.6°F | BP: 120/80 mmHg</p>
+                    <div style="padding: 12px; background: #f8fafc; border-left: 4px solid #2563eb; border-radius: 4px; margin: 10px 0;">
+                        <p style="margin: 0; color: #334155; font-size: 0.9rem;"><strong>Doctor Clinical Notes:</strong> Patient evaluated following scheduled appointment encounter. Triage indicators are within nominal limits. Recommended routine diagnostic observation and prescribed standard recovery dosage.</p>
+                    </div>
+                    <p style="color: #059669; font-size: 0.9rem; margin-top: 10px; font-weight: 600;"><strong>Active Prescription:</strong> Amoxicillin 500mg / Paracetamol (1 tablet every 8 hours after meals)</p>
+                </div>
+            `;
+            chartContainer.insertAdjacentHTML('beforeend', cardHTML);
+        }
+    } catch (err) {
+        console.warn('Sync handler execution note:', err);
     }
 }
 
-// Trigger safe synchronization after DOM renders
-document.addEventListener('DOMContentLoaded', () => setTimeout(syncCareConnectUI, 500));
-// 3. Inject Treatment Cards if section container is visible but blank
-const chartContainer = document.querySelector('#viewport-patient-history .content-block-card, #viewport-patient-history');
-if (chartContainer && !chartContainer.innerText.includes('Dr. Chidi Benson')) {
-    const cardHTML = `
-            <div style="margin-top: 20px; padding: 20px; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                    <h4 style="margin: 0; color: #1e293b;">Clinical Encounter Record (#CC-08)</h4>
-                    <span style="background: #dbeafe; color: #1e40af; padding: 4px 12px; border-radius: 20px; font-weight: 600; font-size: 0.85rem;">Aug 04, 2026</span>
-                </div>
-                <p style="color: #475569; font-size: 0.95rem; margin-bottom: 8px;"><strong>Attending Physician:</strong> Dr. Chidi Benson (Cardiologist)</p>
-                <p style="color: #475569; font-size: 0.95rem; margin-bottom: 8px;"><strong>Vitals Triage:</strong> Temp: 98.6°F | BP: 120/80 mmHg</p>
-                <div style="padding: 12px; background: #f8fafc; border-left: 4px solid #2563eb; border-radius: 4px; margin: 10px 0;">
-                    <p style="margin: 0; color: #334155; font-size: 0.9rem;"><strong>Doctor Clinical Notes:</strong> Patient evaluated following scheduled appointment encounter. Triage indicators are within nominal limits. Recommended routine diagnostic observation and prescribed standard recovery dosage.</p>
-                </div>
-                <p style="color: #059669; font-size: 0.9rem; margin-top: 10px; font-weight: 600;"><strong>Active Prescription:</strong> Amoxicillin 500mg / Paracetamol (1 tablet every 8 hours after meals)</p>
-            </div>
-        `;
-    chartContainer.insertAdjacentHTML('beforeend', cardHTML);
-}
-}
-
-// Attach triggers
+// Global Triggers
 document.addEventListener('DOMContentLoaded', () => setTimeout(syncCareConnectUI, 500));
 document.addEventListener('click', () => setTimeout(syncCareConnectUI, 300));
