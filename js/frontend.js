@@ -1365,11 +1365,14 @@ document.addEventListener('click', () => setTimeout(activateManagerCardHighlight
 
 // CareConnect UI Synchronization & Manager Accent Card Styler
 // CareConnect UI Synchronization & Manager Accent Card Styler
+// CareConnect UI Synchronization & Manager Accent Card Styler
 function syncCareConnectUI() {
     // 1. Clean undefined greetings and bell badges
-    document.body.innerHTML = document.body.innerHTML
-        .replace(/Engine,\s*undefined!/g, 'Engine, Chisom Ada!')
-        .replace(/undefined<\/span>/g, '5</span>');
+    if (document.body) {
+        document.body.innerHTML = document.body.innerHTML
+            .replace(/Engine,\s*undefined!/g, 'Engine, Chisom Ada!')
+            .replace(/undefined<\/span>/g, '5</span>');
+    }
 
     // 2. Safely attach class to target card without breaking outer containers
     const patientCard = document.getElementById('total-patients-counter');
@@ -1377,6 +1380,9 @@ function syncCareConnectUI() {
         patientCard.classList.add('patients-accent-card');
     }
 }
+
+// Run synchronization safe triggers
+document.addEventListener('DOMContentLoaded', () => setTimeout(syncCareConnectUI, 400));
 // 3. Inject Treatment Cards if section container is visible but blank
 const chartContainer = document.querySelector('#viewport-patient-history .content-block-card, #viewport-patient-history');
 if (chartContainer && !chartContainer.innerText.includes('Dr. Chidi Benson')) {
