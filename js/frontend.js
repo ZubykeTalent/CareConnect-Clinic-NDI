@@ -1413,42 +1413,89 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// DYNAMIC NOTIFICATION BADGE & SANITIZER ENGINE
+// DYNAMIC NOTIFICATION ENGINE & DROPDOWN TOGGLE
 // ==========================================
 
-function updateNotificationBadge(count = 5) {
-    // 1. Target all possible notification badges/bell icons
-    const badgeElements = document.querySelectorAll('#notification-badge, .notification-count, .bell-badge, [id*="notification"]');
+async function fetchAndRenderNotifications() {
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    const badge = document.getElementById('notification-badge') || document.querySelector('.notification-count');
+    const dropdownList = document.getElementById('notification-list') ||
+        document.getElementById('notification-dropdown-content') ||
+        document.querySelector('.notification-dropdown');
 
-    badgeElements.forEach(badge => {
+    try {
+        const response = await fetch('/api/profile/notifications', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) return;
+        const data = await response.json();
+        const notifications = data.notifications || data.data || (Array.isArray(data) ? data : []);
+
+        // 1. Update Red Badge Counter Dynamically
+        const unreadCount = notifications.length;
         if (badge) {
-            const finalCount = count > 0 ? count : 0;
-            badge.textContent = finalCount;
-            badge.style.display = finalCount > 0 ? 'inline-block' : 'none';
-        }
-    });
-}
-
-function sanitizeUndefinedUIText() {
-    // 2. Scan all headers, cards, and notification popovers for "undefined" strings
-    const targets = document.querySelectorAll('h1, h2, h3, h4, span, p, div, .notification-item');
-    targets.forEach(el => {
-        if (el && el.childNodes.length === 1 && el.childNodes[0].nodeType === 3) {
-            if (el.textContent.includes('undefined')) {
-                // Strip literal "undefined" or replace with a clean fallback
-                el.textContent = el.textContent.replace(/undefined/g, '').trim();
+            badge.textContent = unreadCount;
+            if (unreadCount > 0) {
+                badge.style.setProperty('display', 'inline-flex', 'important');
+                badge.classList.remove('hidden');
+            } else {
+                badge.style.setProperty('display', 'none', 'important');
             }
         }
-    });
+
+        // 2. Render Notification Items into Dropdown
+        if (dropdownList) {
+            if (notifications.length === 0) {
+                dropdownList.innerHTML = `
+                    <div style="padding: 12px; text-align: center; color: #64748b; font-size: 0.85rem;">
+                        No new notifications.
+                    </div>`;
+                return;
+            }
+
+            dropdownList.innerHTML = notifications.map(item => `
+                <div class="notification-item" style="padding: 10px 14px; border-bottom: 1px solid #f1f5f9; cursor: pointer;">
+                    <div style="font-weight: 600; font-size: 0.88rem; color: #1e293b; margin-bottom: 2px;">
+                        ${item.title || item.type || 'System Notification'}
+                    </div>
+                    <div style="font-size: 0.82rem; color: #475569;">
+                        ${item.message || item.content || 'Medical encounter record updated.'}
+                    </div>
+                    <small style="font-size: 0.72rem; color: #94a3b8; display: block; margin-top: 4px;">
+                        ${item.created_at ? new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
+                    </small>
+                </div>
+            `).join('');
+        }
+
+    } catch (err) {
+        console.warn("Notification sync warning:", err);
+    }
 }
 
-// Global Triggers for Notifications and UI Cleanliness
-document.addEventListener('DOMContentLoaded', () => {
-    updateNotificationBadge(5); // Set your desired active notification count here
-    setTimeout(sanitizeUndefinedUIText, 300);
-    setTimeout(sanitizeUndefinedUIText, 1000);
+// 3. Click Toggle Handler for Bell Icon
+document.addEventListener('click', (e) => {
+    const bellBtn = e.target.closest('#notification-bell, .notification-bell-btn, .nav-bell-icon');
+    const popover = document.getElementById('notification-popover') ||
+        document.getElementById('notification-dropdown') ||
+        document.querySelector('.notification-dropdown-wrapper');
+
+    if (bellBtn && popover) {
+        e.preventDefault();
+        e.stopPropagation();
+        popover.classList.toggle('hidden');
+        popover.style.display = popover.classList.contains('hidden') ? 'none' : 'block';
+        fetchAndRenderNotifications(); // Fresh pull on open
+    } else if (popover && !popover.contains(e.target)) {
+        // Close when clicking anywhere outside
+        popover.classList.add('hidden');
+        popover.style.display = 'none';
+    }
 });
 
-document.addEventListener('click', () => {
-    setTimeout(sanitizeUndefinedUIText, 200);
+// Auto-poll notifications every 15 seconds to catch new incoming items dynamically
+document.addEventListener('DOMContentLoaded', () => {
+    fetchAndRenderNotifications();
+    setInterval(fetchAndRenderNotifications, 15000);
 });
