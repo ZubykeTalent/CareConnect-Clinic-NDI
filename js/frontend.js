@@ -1413,11 +1413,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// DYNAMIC NOTIFICATION ENGINE & DROPDOWN TOGGLE
-// ==========================================
-
-// ==========================================
-// DYNAMIC NOTIFICATION ENGINE (MATCHED TO YOUR HTML)
+// DYNAMIC NOTIFICATION ENGINE & UI SANITIZER
 // ==========================================
 
 async function fetchAndRenderNotifications() {
@@ -1425,40 +1421,30 @@ async function fetchAndRenderNotifications() {
     const badge = document.getElementById('bell-count-badge');
     const itemsList = document.getElementById('notification-items-list');
 
-    let unreadCount = 5; // Default count fallback
+    // 1. Start at 0 so blank users don't see fake notifications
+    let unreadCount = 0;
+    let list = [];
 
     if (token) {
         try {
+            // 2. Fetch specific notifications for the logged-in user
             const response = await fetch('/api/profile/notifications', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
             if (response.ok) {
                 const data = await response.json();
-                const list = data.notifications || data.data || (Array.isArray(data) ? data : []);
+                list = data.notifications || data.data || (Array.isArray(data) ? data : []);
                 unreadCount = list.length;
-
-                if (itemsList && list.length > 0) {
-                    itemsList.innerHTML = list.map(item => `
-                        <div class="notification-item" style="padding: 10px 14px; border-bottom: 1px solid #f1f5f9;">
-                            <div style="font-weight: 600; font-size: 0.88rem; color: #1e293b;">
-                                ${item.title || item.type || 'System Alert'}
-                            </div>
-                            <div style="font-size: 0.82rem; color: #475569; margin-top: 2px;">
-                                ${item.message || item.content || 'Medical record updated.'}
-                            </div>
-                        </div>
-                    `).join('');
-                }
             }
         } catch (err) {
             console.warn("Notification sync fallback active");
         }
     }
 
-    // Safely update exact badge element (bell-count-badge)
+    // 3. Safely update the red badge counter
     if (badge) {
-        badge.textContent = String(typeof unreadCount === 'number' ? unreadCount : 0);
+        badge.textContent = String(unreadCount);
         if (unreadCount > 0) {
             badge.classList.remove('hidden');
             badge.style.setProperty('display', 'inline-block', 'important');
@@ -1467,6 +1453,39 @@ async function fetchAndRenderNotifications() {
             badge.style.setProperty('display', 'none', 'important');
         }
     }
+
+    // 4. Populate the dropdown list dynamically
+    if (itemsList) {
+        if (unreadCount > 0) {
+            itemsList.innerHTML = list.map(item => `
+                <div class="notification-item" style="padding: 10px 14px; border-bottom: 1px solid #f1f5f9;">
+                    <div style="font-weight: 600; font-size: 0.88rem; color: #1e293b;">
+                        ${item.title || item.type || 'System Alert'}
+                    </div>
+                    <div style="font-size: 0.82rem; color: #475569; margin-top: 2px;">
+                        ${item.message || item.content || 'Medical record updated.'}
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            itemsList.innerHTML = `<div style="padding: 15px; text-align: center; color: #64748b; font-size: 0.85rem;">No active notifications pending.</div>`;
+        }
+    }
+}
+
+// 5. UI Sanitizer to permanently wipe "undefined!" from headers
+function sanitizeDashboardUI() {
+    const elements = document.querySelectorAll('h1, h2, h3, h4, h5, p, span, div');
+    elements.forEach(el => {
+        if (el.childNodes.length > 0) {
+            el.childNodes.forEach(node => {
+                if (node.nodeType === 3 && node.nodeValue.includes('undefined')) {
+                    // Transforms "Welcome, undefined!" into "Welcome!"
+                    node.nodeValue = node.nodeValue.replace(/,\s*undefined!/g, '!').replace(/undefined/g, '');
+                }
+            });
+        }
+    });
 }
 
 // Toggle notification drawer open/close
@@ -1484,7 +1503,12 @@ document.addEventListener('click', (e) => {
     }
 });
 
+// Initialize systems on load
 document.addEventListener('DOMContentLoaded', () => {
+    sanitizeDashboardUI();
     fetchAndRenderNotifications();
     setInterval(fetchAndRenderNotifications, 15000);
+
+    // Backup sweep for late-loading DOM elements
+    setTimeout(sanitizeDashboardUI, 500);
 });
