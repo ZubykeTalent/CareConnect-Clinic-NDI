@@ -1512,3 +1512,59 @@ document.addEventListener('DOMContentLoaded', () => {
     // Backup sweep for late-loading DOM elements
     setTimeout(sanitizeDashboardUI, 500);
 });
+
+// ==========================================
+// INSTANT USER NAME & WELCOME BANNER FIX
+// ==========================================
+
+function updatePatientWelcomeBanner(userProfile = null) {
+    // 1. Get cached name instantly from local storage
+    const cachedName = localStorage.getItem('user_full_name') || '';
+    const nameToDisplay = (userProfile && (userProfile.full_name || userProfile.name))
+        ? (userProfile.full_name || userProfile.name)
+        : cachedName;
+
+    // 2. Target all welcome banner elements
+    const bannerElements = document.querySelectorAll('h1, h2, h3, .patient-welcome-banner h1');
+
+    bannerElements.forEach(el => {
+        if (el.textContent.includes('Welcome to Your Health Center Engine')) {
+            if (nameToDisplay && nameToDisplay.trim() !== '' && nameToDisplay !== 'undefined') {
+                el.textContent = `Welcome to Your Health Center Engine, ${nameToDisplay.trim()}!`;
+            } else {
+                // Remove undefined cleanly if name isn't loaded yet
+                el.textContent = `Welcome to Your Health Center Engine!`;
+            }
+        }
+    });
+}
+
+// Automatically save user's full name to localStorage whenever profile data returns
+async function loadUserProfileHeader() {
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    if (!token) return;
+
+    try {
+        const res = await fetch('/api/profile/me', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+            const data = await res.json();
+            const user = data.user || data;
+            if (user && user.full_name) {
+                // Save name to local storage so next time it loads instantly
+                localStorage.setItem('user_full_name', user.full_name);
+                updatePatientWelcomeBanner(user);
+            }
+        }
+    } catch (err) {
+        console.warn("Profile header sync bypass:", err);
+    }
+}
+
+// Run immediately on page load
+updatePatientWelcomeBanner();
+document.addEventListener('DOMContentLoaded', () => {
+    updatePatientWelcomeBanner();
+    loadUserProfileHeader();
+});
