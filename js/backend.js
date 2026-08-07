@@ -516,37 +516,50 @@ app.get('/api/patients/dashboard-metrics', authenticateBearerToken, restrictToRo
     }
 });
 // Patient Medical History / Treatment Charts (Safe query using a.appointment_date)
-app.get('/api/patients/medical-history', authenticateToken, (req, res) => {
-    const patientId = req.user.patient_id || req.user.id;
+// ==========================================
+// PATIENT MEDICAL HISTORY ROUTE (FIXED)
+// ==========================================
+app.get('/api/patients/medical-history', authenticateBearerToken, async (req, res) => {
+    try {
+        const userId = req.userContext?.userId || req.user?.id;
 
-    const query = `
-        SELECT 
-            a.appointment_id,
-            a.appointment_date,
-            mr.body_temperature,
-            mr.bp_mmHg,
-            mr.heart_rate_bpm,
-            mr.clinical_notes,
-            p.medication,
-            p.dosage,
-            p.instructions,
-            d.full_name AS doctor_name,
-            d.specialization
-        FROM appointments a
-        LEFT JOIN medicalrecords mr ON a.appointment_id = mr.appointment_id
-        LEFT JOIN prescriptions p ON a.appointment_id = p.appointment_id
-        LEFT JOIN doctors d ON a.doctor_id = d.doctor_id
-        WHERE a.patient_id = ? AND a.status = 'COMPLETED'
-        ORDER BY a.appointment_date DESC
-    `;
-
-    dbPool.query(query, [patientId], (err, results) => {
-        if (err) {
-            console.error("Medical history query error:", err);
-            return res.status(500).json({ error: "Failed to retrieve medical records" });
+        // 1. Map user_id to patient_id
+        const [pData] = await dbPool.execute('SELECT patient_id FROM patients WHERE user_id = ?', [userId]);
+        if (!pData || pData.length === 0) {
+            return res.json([]);
         }
-        res.json(results || []);
-    });
+
+        const patientId = pData[0].patient_id;
+
+        // 2. Fetch completed encounters with notes and vitals
+        const query = `
+            SELECT 
+                a.appointment_id,
+                DATE_FORMAT(a.appointment_date, "%Y-%m-%d") AS appointment_date,
+                mr.body_temperature,
+                mr.bp_mmHg,
+                mr.heart_rate_bpm,
+                mr.clinical_notes,
+                p.medication,
+                p.dosage,
+                p.instructions,
+                d.full_name AS doctor_name,
+                d.specialization
+            FROM appointments a
+            LEFT JOIN medicalrecords mr ON a.appointment_id = mr.appointment_id
+            LEFT JOIN prescriptions p ON a.appointment_id = p.appointment_id
+            LEFT JOIN doctors d ON a.doctor_id = d.doctor_id
+            WHERE a.patient_id = ? AND a.status = 'COMPLETED'
+            ORDER BY a.appointment_date DESC
+        `;
+
+        const [records] = await dbPool.execute(query, [patientId]);
+        return res.json(records || []);
+
+    } catch (err) {
+        console.error("Medical history extraction fault:", err);
+        return res.status(500).json({ success: false, message: "Medical history extraction failure." });
+    }
 });
 app.post('/api/doctor/consultation/submit', authenticateBearerToken, restrictToRoles('Doctor'), async (req, res) => {
     const { appointment_id, patient_id, temperature, bp_mmHg, clinical_notes, medication, dosage, instructions } = req.body;
