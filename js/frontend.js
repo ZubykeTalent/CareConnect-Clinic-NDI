@@ -761,86 +761,7 @@ async function fetchPatientComprehensiveMedicalRecords() {
         `).join('');
     } catch (err) { }
 }
-async function loadPatientTreatmentCharts() {
-    const container = document.getElementById('treatment-charts-container') ||
-        document.getElementById('patient-medical-records-stack') ||
-        document.querySelector('.treatment-records-wrapper') ||
-        document.querySelector('#viewport-patient-treatment .content-block-card');
 
-    if (!container) return;
-
-    try {
-        const response = await fetch('/api/patients/medical-history', {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token') || sessionStorage.getItem('token')}` }
-        });
-        const data = await response.json();
-
-        // Guarantees Chisom's completed encounter displays even if table vitals were default
-        const chartsToDisplay = (data.success && data.charts && data.charts.length > 0) ? data.charts : [
-            {
-                record_id: 'CC-08',
-                formatted_date: 'Aug 04, 2026',
-                doctor_name: 'Dr. Chidi Benson',
-                specialization: 'Cardiologist',
-                temperature: '98.6°F',
-                bp_mmHg: '120/80 mmHg',
-                clinical_notes: 'Patient evaluated following scheduled appointment encounter. Vital signs are within nominal limits. Recommended routine observation and standard recovery course.',
-                medication: 'Amoxicillin 500mg / Paracetamol',
-                dosage: '1 tablet every 8 hours',
-                instructions: 'Take after meals for 5 days'
-            }
-        ];
-
-        // Renders complete clinical records with doctor notes & prescriptions
-        const htmlContent = chartsToDisplay.map((chart, idx) => `
-            <div style="background: var(--card-bg, #ffffff); border: 1px solid var(--border-color, #e5e7eb); border-radius: 12px; padding: 18px; margin-top: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0,0,0,0.08); padding-bottom: 10px; margin-bottom: 12px;">
-                    <span style="font-weight: 700; color: #2563eb;"># Record Entry 0${chartsToDisplay.length - idx}</span>
-                    <span style="font-size: 0.85em; opacity: 0.75; font-weight: 600;">📅 ${chart.formatted_date}</span>
-                </div>
-
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 14px;">
-                    <div><small style="opacity: 0.7;">Attending Physician</small><br><strong>${chart.doctor_name || 'Dr. Chidi Benson'}</strong></div>
-                    <div><small style="opacity: 0.7;">Body Temp</small><br><strong>🌡️ ${chart.temperature || '98.6°F'}</strong></div>
-                    <div><small style="opacity: 0.7;">Blood Pressure</small><br><strong>🩺 ${chart.bp_mmHg || '120/80 mmHg'}</strong></div>
-                </div>
-
-                <div style="padding: 12px; background: rgba(37, 99, 235, 0.05); border-left: 4px solid #2563eb; border-radius: 6px; margin-bottom: 12px;">
-                    <p style="margin: 0; color: var(--text-color, #334155); font-size: 0.92rem;">
-                        <strong>Doctor Clinical Notes:</strong> ${chart.clinical_notes || chart.treatment_notes || 'Patient encounter completed.'}
-                    </p>
-                </div>
-
-                ${chart.medication ? `
-                <div style="padding: 10px 14px; background: rgba(16, 185, 129, 0.08); border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.2);">
-                    <p style="margin: 0; color: #047857; font-size: 0.88rem; font-weight: 600;">
-                        💊 Active Prescription: ${chart.medication} ${chart.dosage ? `— <strong>${chart.dosage}</strong>` : ''} ${chart.instructions ? `(${chart.instructions})` : ''}
-                    </p>
-                </div>` : ''}
-            </div>
-        `).join('');
-
-        // Appends into inner list wrapper so search input & header remain intact
-        let listWrapper = container.querySelector('#treatment-records-list-inner');
-        if (!listWrapper) {
-            listWrapper = document.createElement('div');
-            listWrapper.id = 'treatment-records-list-inner';
-            container.appendChild(listWrapper);
-        }
-        listWrapper.innerHTML = htmlContent;
-
-    } catch (err) {
-        console.error("Treatment chart load error:", err);
-    }
-}
-
-// Auto-trigger chart loader when clicking tabs or loading page
-document.addEventListener('DOMContentLoaded', () => setTimeout(loadPatientTreatmentCharts, 500));
-document.addEventListener('click', (e) => {
-    if (e.target.closest('[data-viewport*="treatment"], .sidebar-menu-item, button')) {
-        setTimeout(loadPatientTreatmentCharts, 250);
-    }
-});
 
 // STAKEHOLDER 2: DOCTOR CLINICAL VIEWS MODULES
 async function fetchDoctorConsultationQueueGrid() {
@@ -1535,86 +1456,155 @@ function updateWelcomeHeading(name = null) {
     }
 }
 
-// ==========================================
-// TARGETED PATIENT NAME SPAN HYDRATOR & SYNC
-// ==========================================
+// ============================================================
+// DYNAMIC PATIENT DASHBOARD & TREATMENT CHART ENGINE
+// ============================================================
 
+// 1. Safe Name Hydrator for Welcome Banner
 function updatePatientNameSpan(name = null) {
     const cachedName = localStorage.getItem('user_full_name');
-    const displayName = (name && name !== 'undefined') ? name : cachedName;
+    const rawName = (name && name !== 'undefined') ? name : cachedName;
 
-    if (displayName && displayName !== 'undefined' && displayName.trim() !== '') {
+    if (rawName && rawName !== 'undefined' && rawName.trim() !== '') {
+        const cleanName = rawName.trim().replace(/^Welcome to Your Health Center Engine,\s*/i, '');
         document.querySelectorAll('.patient-name-span').forEach(span => {
-            span.textContent = displayName.trim();
+            span.textContent = cleanName;
         });
     }
 }
 
-function onLoginSuccess(userData) {
-    if (userData) {
-        const fullName = userData.full_name || userData.name || userData.patient_name || '';
-        if (fullName && fullName !== 'undefined') {
-            localStorage.setItem('user_full_name', fullName);
-            updatePatientNameSpan(fullName);
-        }
-    }
-}
-
-// Hydrate name instantly on page load and API fetch
-document.addEventListener('DOMContentLoaded', async () => {
-    updatePatientNameSpan();
-
+// 2. Dynamic Dashboard Metrics (Calculates 0 for new accounts like Daniel)
+async function fetchAndRenderPatientMetrics() {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     if (!token) return;
 
     try {
-        const res = await fetch('/api/profile/me', {
+        const response = await fetch('/api/patients/medical-history', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        if (res.ok) {
-            const data = await res.json();
-            const user = data.user || data;
-            const fullName = user.full_name || user.name || '';
-            if (fullName && fullName !== 'undefined') {
-                localStorage.setItem('user_full_name', fullName);
-                updatePatientNameSpan(fullName);
+
+        const nextApptEl = document.getElementById('p-metric-next');
+        const recordsCountEl = document.getElementById('p-metric-records');
+        const prescriptionsCountEl = document.getElementById('p-metric-prescriptions');
+
+        if (!response.ok) {
+            // Reset strictly to 0 on clean/empty accounts
+            if (nextApptEl) nextApptEl.textContent = 'No upcoming appointments';
+            if (recordsCountEl) recordsCountEl.textContent = '0 Total Nodes';
+            if (prescriptionsCountEl) prescriptionsCountEl.textContent = '0 Prescribed Items';
+            return;
+        }
+
+        const records = await response.json();
+        const recordList = Array.isArray(records) ? records : (records.data || []);
+
+        // Dynamic Counters
+        const totalMedicalRecords = recordList.length;
+        const activePrescriptions = recordList.filter(r => r.medication && r.medication.trim() !== '').length;
+
+        if (recordsCountEl) recordsCountEl.textContent = `${totalMedicalRecords} Total Nodes`;
+        if (prescriptionsCountEl) prescriptionsCountEl.textContent = `${activePrescriptions} Prescribed Items`;
+
+        // Next Appointment Logic
+        if (nextApptEl) {
+            const upcoming = recordList.find(r => r.appointment_date && new Date(r.appointment_date) > new Date());
+            if (upcoming) {
+                const dateObj = new Date(upcoming.appointment_date);
+                nextApptEl.textContent = `${dateObj.toISOString().split('T')[0]} @ ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+            } else {
+                nextApptEl.textContent = 'No upcoming appointments';
             }
         }
     } catch (err) {
-        console.warn("Profile header sync warning:", err);
+        console.warn("Metrics dynamic sync warning:", err);
     }
-});
+}
 
-// ==========================================
-// TARGETED PATIENT NAME SPAN HYDRATOR
-// ==========================================
+// 3. Dynamic Treatment Charts (Includes BPM, Temp, BP, Doctor, Notes & Prescriptions)
+async function renderPatientTreatmentCharts() {
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    const container = document.getElementById('patient-treatment-charts-list') ||
+        document.querySelector('.treatment-charts-list');
 
-function updatePatientNameSpan(name = null) {
-    const spanElements = document.querySelectorAll('.patient-name-span');
-    const cachedName = localStorage.getItem('user_full_name');
+    if (!container || !token) return;
 
-    // Pick valid name: argument -> local storage -> fallback to skip if invalid
-    let displayName = name || cachedName;
-
-    if (displayName && displayName !== 'undefined' && displayName.trim() !== '') {
-        spanElements.forEach(span => {
-            span.textContent = displayName.trim();
+    try {
+        const response = await fetch('/api/patients/medical-history', {
+            headers: { 'Authorization': `Bearer ${token}` }
         });
-    }
-}
 
-// Automatically save name and update UI during login success
-function setLoggedInUserContext(user) {
-    if (user) {
-        const fullName = user.full_name || user.name || user.first_name || '';
-        if (fullName && fullName !== 'undefined') {
-            localStorage.setItem('user_full_name', fullName);
-            updatePatientNameSpan(fullName);
+        if (!response.ok) {
+            container.innerHTML = `<div style="padding: 30px; text-align: center; color: #64748b;">No active medical history records found.</div>`;
+            return;
         }
+
+        const records = await response.json();
+        const recordList = Array.isArray(records) ? records : (records.data || []);
+
+        if (recordList.length === 0) {
+            container.innerHTML = `
+                <div style="padding: 40px; text-align: center; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; color: #64748b;">
+                    <i class="fa-solid fa-folder-open" style="font-size: 2rem; color: #cbd5e1; margin-bottom: 10px; display: block;"></i>
+                    No completed treatment records found for your account.
+                </div>`;
+            return;
+        }
+
+        container.innerHTML = recordList.map((item, index) => {
+            const formattedDate = item.appointment_date
+                ? new Date(item.appointment_date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
+                : 'Date Unspecified';
+
+            // Displays ONLY raw values submitted by the doctor on process trigger
+            const doctorName = item.doctor_name ? `${item.doctor_name}${item.specialization ? ' (' + item.specialization + ')' : ''}` : 'Attending Physician';
+            const temp = item.body_temperature ? `${item.body_temperature}` : 'Not Recorded';
+            const bp = item.bp_mmHg ? `${item.bp_mmHg}` : 'Not Recorded';
+            const bpm = item.heart_rate_bpm ? `${item.heart_rate_bpm}` : 'Not Recorded';
+            const clinicalNotes = item.clinical_notes ? item.clinical_notes : 'No clinical notes added by physician.';
+            const prescription = item.medication
+                ? `${item.medication} ${item.dosage || ''} ${item.instructions ? '— ' + item.instructions : ''}`.trim()
+                : 'No prescription issued for this encounter.';
+
+            return `
+                <div class="treatment-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px;">
+                        <span style="font-weight: 700; color: #2563eb; font-size: 1.05rem;"># Record Entry ${String(index + 1).padStart(2, '0')}</span>
+                        <span style="font-size: 0.85rem; color: #64748b;"><i class="fa-regular fa-calendar"></i> ${formattedDate}</span>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 14px; background: #f8fafc; padding: 12px; border-radius: 8px;">
+                        <div>
+                            <small style="color: #64748b; font-size: 0.75rem; display: block;">Attending Physician</small>
+                            <strong style="color: #1e293b; font-size: 0.88rem;">${doctorName}</strong>
+                        </div>
+                        <div>
+                            <small style="color: #64748b; font-size: 0.75rem; display: block;">Body Temp</small>
+                            <strong style="color: #1e293b; font-size: 0.88rem;"><i class="fa-solid fa-temperature-half" style="color: #ef4444;"></i> ${temp}</strong>
+                        </div>
+                        <div>
+                            <small style="color: #64748b; font-size: 0.75rem; display: block;">Blood Pressure</small>
+                            <strong style="color: #1e293b; font-size: 0.88rem;"><i class="fa-solid fa-heart-pulse" style="color: #06b6d4;"></i> ${bp}</strong>
+                        </div>
+                        <div>
+                            <small style="color: #64748b; font-size: 0.75rem; display: block;">Pulse / Heart Rate (BPM)</small>
+                            <strong style="color: #1e293b; font-size: 0.88rem;"><i class="fa-solid fa-wave-square" style="color: #10b981;"></i> ${bpm}</strong>
+                        </div>
+                    </div>
+
+                    <div style="border-left: 3px solid #2563eb; padding-left: 12px; margin-bottom: 12px; background: #f1f5f9; padding: 10px 12px; border-radius: 0 6px 6px 0;">
+                        <strong style="font-size: 0.82rem; color: #1e293b; display: block; margin-bottom: 2px;">Doctor Clinical Notes:</strong>
+                        <span style="font-size: 0.85rem; color: #334155;">${clinicalNotes}</span>
+                    </div>
+
+                    <div style="background: #ecfdf5; border: 1px solid #a7f3d0; padding: 10px 14px; border-radius: 8px; color: #065f46; font-size: 0.85rem;">
+                        <i class="fa-solid fa-pills" style="margin-right: 6px; color: #059669;"></i>
+                        <strong>Active Prescription:</strong> ${prescription}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+    } catch (err) {
+        console.warn("Treatment chart render error:", err);
     }
 }
-
-// Hydrate name instantly from local storage on page load/switch
-document.addEventListener('DOMContentLoaded', () => {
-    updatePatientNameSpan();
-});
