@@ -1535,20 +1535,34 @@ function updateWelcomeHeading(name = null) {
     }
 }
 
-// Save user name during login response in frontend logic
+// ==========================================
+// TARGETED PATIENT NAME SPAN HYDRATOR & SYNC
+// ==========================================
+
+function updatePatientNameSpan(name = null) {
+    const cachedName = localStorage.getItem('user_full_name');
+    const displayName = (name && name !== 'undefined') ? name : cachedName;
+
+    if (displayName && displayName !== 'undefined' && displayName.trim() !== '') {
+        document.querySelectorAll('.patient-name-span').forEach(span => {
+            span.textContent = displayName.trim();
+        });
+    }
+}
+
 function onLoginSuccess(userData) {
     if (userData) {
         const fullName = userData.full_name || userData.name || userData.patient_name || '';
-        if (fullName) {
+        if (fullName && fullName !== 'undefined') {
             localStorage.setItem('user_full_name', fullName);
-            updateWelcomeHeading(fullName);
+            updatePatientNameSpan(fullName);
         }
     }
 }
 
-// Run header hydration on page load
+// Hydrate name instantly on page load and API fetch
 document.addEventListener('DOMContentLoaded', async () => {
-    updateWelcomeHeading();
+    updatePatientNameSpan();
 
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     if (!token) return;
@@ -1560,12 +1574,47 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (res.ok) {
             const data = await res.json();
             const user = data.user || data;
-            if (user && user.full_name) {
-                localStorage.setItem('user_full_name', user.full_name);
-                updateWelcomeHeading(user.full_name);
+            const fullName = user.full_name || user.name || '';
+            if (fullName && fullName !== 'undefined') {
+                localStorage.setItem('user_full_name', fullName);
+                updatePatientNameSpan(fullName);
             }
         }
     } catch (err) {
-        console.warn("Header profile fetch warning:", err);
+        console.warn("Profile header sync warning:", err);
     }
+});
+
+// ==========================================
+// TARGETED PATIENT NAME SPAN HYDRATOR
+// ==========================================
+
+function updatePatientNameSpan(name = null) {
+    const spanElements = document.querySelectorAll('.patient-name-span');
+    const cachedName = localStorage.getItem('user_full_name');
+
+    // Pick valid name: argument -> local storage -> fallback to skip if invalid
+    let displayName = name || cachedName;
+
+    if (displayName && displayName !== 'undefined' && displayName.trim() !== '') {
+        spanElements.forEach(span => {
+            span.textContent = displayName.trim();
+        });
+    }
+}
+
+// Automatically save name and update UI during login success
+function setLoggedInUserContext(user) {
+    if (user) {
+        const fullName = user.full_name || user.name || user.first_name || '';
+        if (fullName && fullName !== 'undefined') {
+            localStorage.setItem('user_full_name', fullName);
+            updatePatientNameSpan(fullName);
+        }
+    }
+}
+
+// Hydrate name instantly from local storage on page load/switch
+document.addEventListener('DOMContentLoaded', () => {
+    updatePatientNameSpan();
 });
