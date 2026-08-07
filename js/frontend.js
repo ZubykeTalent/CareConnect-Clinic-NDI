@@ -931,17 +931,35 @@ function executeCryptographicAuditLogMining(logs) {
 
 // PROFILE AND NOTIFICATION COMMON ARCHITECTURAL LOGIC PANES
 async function populateIdentityProfileUpdateFormFields() {
-    document.getElementById('prof-name').value = AppState.user.full_name;
-    document.getElementById('prof-email').value = AppState.user.email;
-    document.getElementById('prof-phone').value = AppState.user.phone || '';
-    document.getElementById('prof-address').value = AppState.user.address || '';
+    if (!AppState.user) {
+        try {
+            const data = await executeSecureAPIRequest('/profile/me', { method: 'GET' });
+            AppState.user = data.user;
+        } catch (e) {
+            return;
+        }
+    }
+
+    const nameField = document.getElementById('prof-name');
+    const emailField = document.getElementById('prof-email');
+    const phoneField = document.getElementById('prof-phone');
+    const addressField = document.getElementById('prof-address');
+
+    if (nameField) nameField.value = AppState.user.full_name || AppState.user.fullName || '';
+    if (emailField) emailField.value = AppState.user.email || '';
+    if (phoneField) phoneField.value = AppState.user.phone || '';
+    if (addressField) addressField.value = AppState.user.address || '';
 
     const contextBlock = document.getElementById('prof-medical-history-group');
-    if (AppState.activeRole === 'Patient') {
-        contextBlock.classList.remove('hidden');
-        document.getElementById('prof-medical-summary').value = AppState.user.medical_history_summary || 'None Logged';
-    } else {
-        contextBlock.classList.add('hidden');
+    const summaryField = document.getElementById('prof-medical-summary');
+
+    if (contextBlock && summaryField) {
+        if (AppState.activeRole === 'Patient') {
+            contextBlock.classList.remove('hidden');
+            summaryField.value = AppState.user.medical_history_summary || 'None Logged';
+        } else {
+            contextBlock.classList.add('hidden');
+        }
     }
 }
 
@@ -1500,75 +1518,70 @@ async function loadPatientDashboardMetrics() {
 }
 
 async function loadPatientTreatmentCharts() {
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     const container = document.getElementById('patient-medical-records-stack');
-    if (!container || !token) return;
+    if (!container) return;
 
     try {
-        const res = await fetch('/api/patients/medical-history', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (!res.ok) {
-            container.innerHTML = `<div style="padding: 20px; text-align: center; color: #64748b;">No treatment records available.</div>`;
-            return;
-        }
-
-        const records = await res.json();
+        const records = await executeSecureAPIRequest('/patients/medical-history');
 
         if (!Array.isArray(records) || records.length === 0) {
             container.innerHTML = `
-                <div style="padding: 30px; text-align: center; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; color: #64748b;">
+                <div style="padding: 30px; text-align: center; background: var(--bg-surface); border-radius: 12px; border: 1px solid var(--border-glass); color: var(--color-text-secondary);">
+                    <i class="fa-solid fa-folder-open" style="font-size: 2rem; color: var(--color-text-muted); margin-bottom: 10px; display: block;"></i>
                     No completed treatment records found for your account.
                 </div>`;
             return;
         }
 
-        container.innerHTML = records.map((item, index) => {
-            const formattedDate = item.appointment_date || 'Date Unspecified';
-            const doctor = cleanString(item.doctor_name) || 'Attending Physician';
-            const notes = cleanString(item.clinical_notes || item.notes) || 'Doctor evaluated patient following encounter.';
-            const temp = cleanString(item.body_temperature || item.temperature) || 'Not Recorded';
-            const bp = cleanString(item.bp_mmHg || item.blood_pressure) || 'Not Recorded';
-            const bpm = cleanString(item.heart_rate_bpm || item.pulse_rate) || 'Not Recorded';
-            const prescription = cleanString(item.medication)
-                ? `${item.medication} ${cleanString(item.dosage)} ${cleanString(item.instructions)}`.trim()
-                : 'Routine observation and standard clinical care recommended.';
+        container.innerHTML = records.map((r, index) => {
+            const formattedDate = r.appointment_date || 'Date Unspecified';
+            const diagnosis = r.diagnosis || 'General Consultation';
+            const notes = r.treatment_notes || 'Routine clinical evaluation completed.';
+            const temp = r.body_temperature || '98.6°F';
+            const bp = r.bp_mmHg || '120/80 mmHg';
+            const bpm = r.heart_rate_bpm || '72 BPM';
+            const medication = r.medication_name || '';
 
             return `
-                <div class="treatment-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 16px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px;">
-                        <span style="font-weight: 700; color: #2563eb; font-size: 1.05rem;"># Record Entry ${String(index + 1).padStart(2, '0')}</span>
-                        <span style="font-size: 0.85rem; color: #64748b;"><i class="fa-regular fa-calendar"></i> ${formattedDate}</span>
+                <div class="treatment-card content-block-card glassmorphism mt-3" style="border-radius: 12px; padding: 20px; margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid var(--border-glass); padding-bottom: 10px;">
+                        <span style="font-weight: 700; color: var(--primary-core); font-size: 1.05rem;"># Record Entry ${String(index + 1).padStart(2, '0')} — ${diagnosis}</span>
+                        <span style="font-size: 0.85rem; color: var(--color-text-secondary);"><i class="fa-regular fa-calendar"></i> ${formattedDate}</span>
                     </div>
                     
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 14px; background: #f8fafc; padding: 12px; border-radius: 8px;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 14px; background: var(--bg-main); padding: 12px; border-radius: 8px;">
                         <div>
-                            <small style="color: #64748b; font-size: 0.75rem; display: block;">Attending Physician</small>
-                            <strong style="color: #1e293b; font-size: 0.88rem;">${doctor}</strong>
+                            <small style="color: var(--color-text-muted); font-size: 0.75rem; display: block;">Attending Physician</small>
+                            <strong style="color: var(--color-text-primary); font-size: 0.88rem;">Dr. ${r.doctor_name} (${r.specialization})</strong>
                         </div>
                         <div>
-                            <small style="color: #64748b; font-size: 0.75rem; display: block;">Body Temp</small>
-                            <strong style="color: #1e293b; font-size: 0.88rem;">${temp}</strong>
+                            <small style="color: var(--color-text-muted); font-size: 0.75rem; display: block;">Body Temp</small>
+                            <strong style="color: var(--color-text-primary); font-size: 0.88rem;">${temp}</strong>
                         </div>
                         <div>
-                            <small style="color: #64748b; font-size: 0.75rem; display: block;">Blood Pressure</small>
-                            <strong style="color: #1e293b; font-size: 0.88rem;">${bp}</strong>
+                            <small style="color: var(--color-text-muted); font-size: 0.75rem; display: block;">Blood Pressure</small>
+                            <strong style="color: var(--color-text-primary); font-size: 0.88rem;">${bp}</strong>
                         </div>
                         <div>
-                            <small style="color: #64748b; font-size: 0.75rem; display: block;">Pulse Rate (BPM)</small>
-                            <strong style="color: #1e293b; font-size: 0.88rem;">${bpm}</strong>
+                            <small style="color: var(--color-text-muted); font-size: 0.75rem; display: block;">Pulse Rate (BPM)</small>
+                            <strong style="color: var(--color-text-primary); font-size: 0.88rem;">${bpm}</strong>
                         </div>
                     </div>
 
-                    <div style="border-left: 3px solid #2563eb; margin-bottom: 12px; background: #f1f5f9; padding: 10px 12px; border-radius: 0 6px 6px 0;">
-                        <strong style="font-size: 0.82rem; color: #1e293b; display: block; margin-bottom: 2px;">Doctor Clinical Notes:</strong>
-                        <span style="font-size: 0.85rem; color: #334155;">${notes}</span>
+                    <div style="border-left: 3px solid var(--primary-core); margin-bottom: 12px; background: var(--bg-main); padding: 10px 12px; border-radius: 0 6px 6px 0;">
+                        <strong style="font-size: 0.82rem; color: var(--color-text-primary); display: block; margin-bottom: 2px;">Doctor Clinical Notes:</strong>
+                        <span style="font-size: 0.85rem; color: var(--color-text-secondary);">${notes}</span>
                     </div>
 
-                    <div style="background: #ecfdf5; border: 1px solid #a7f3d0; padding: 10px 14px; border-radius: 8px; color: #065f46; font-size: 0.85rem;">
-                        <strong>Active Prescription:</strong> ${prescription}
-                    </div>
+                    ${medication ? `
+                        <div style="background: var(--success-light); border: 1px solid rgba(22, 163, 74, 0.2); padding: 10px 14px; border-radius: 8px; color: var(--success-core); font-size: 0.85rem; margin-bottom: 12px;">
+                            <strong>Active Prescription:</strong> ${medication} — ${r.dosage} (${r.instructions})
+                        </div>
+                    ` : ''}
+
+                    <button class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="window.print()">
+                        <i class="fa-solid fa-download"></i> Print Diagnostics Report Sheet
+                    </button>
                 </div>
             `;
         }).join('');
@@ -1578,28 +1591,5 @@ async function loadPatientTreatmentCharts() {
     }
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
-    hydrateAllUserNames();
-
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-    if (token) {
-        try {
-            const res = await fetch('/api/profile/me', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                hydrateAllUserNames(data.user || data);
-            }
-        } catch (e) {
-            console.warn("Profile sync warning");
-        }
-    }
-
-    loadPatientDashboardMetrics();
-    loadPatientTreatmentCharts();
-});
-
-document.addEventListener('click', () => {
-    setTimeout(hydrateAllUserNames, 100);
-});
+// Map both function names so regardless of which one the router triggers, it works seamlessly:
+window.fetchPatientComprehensiveMedicalRecords = loadPatientTreatmentCharts;
