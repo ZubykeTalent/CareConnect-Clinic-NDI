@@ -507,25 +507,30 @@ app.get('/api/patients/dashboard-metrics', authenticateBearerToken, restrictToRo
 // ==========================================
 // PATIENT MEDICAL HISTORY ROUTE (FIXED)
 // ==========================================
+// ============================================================
+// PATIENT MEDICAL HISTORY ROUTE (RESILIENT FIELD SELECTION)
+// ============================================================
 app.get('/api/patients/medical-history', authenticateBearerToken, async (req, res) => {
     try {
         const userId = req.userContext?.userId || req.user?.id;
 
+        // 1. Fetch patient ID
         const [pData] = await dbPool.execute('SELECT patient_id FROM patients WHERE user_id = ?', [userId]);
-        if (!pData || pData.length === 0) return res.json([]);
+        if (!pData || pData.length === 0) {
+            return res.json([]);
+        }
 
         const patientId = pData[0].patient_id;
 
+        // 2. Select mr.* and p.* to safely retrieve existing columns without throwing unknown field crashes
         const query = `
             SELECT 
                 a.appointment_id,
                 DATE_FORMAT(a.appointment_date, "%Y-%m-%d") AS appointment_date,
-                p.medication,
-                p.dosage,
-                p.instructions,
                 d.full_name AS doctor_name,
                 d.specialization,
-                mr.*
+                mr.*,
+                p.*
             FROM appointments a
             LEFT JOIN medicalrecords mr ON a.appointment_id = mr.appointment_id
             LEFT JOIN prescriptions p ON a.appointment_id = p.appointment_id
