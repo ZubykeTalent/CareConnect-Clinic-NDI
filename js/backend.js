@@ -467,25 +467,31 @@ app.get('/api/patients/dashboard-metrics', authenticateBearerToken, restrictToRo
 
         const patientId = pData[0].patient_id;
 
+        // 1. Count actual completed appointments (0 for new users)
         const [completedAppts] = await dbPool.execute(
             `SELECT COUNT(*) as total FROM appointments WHERE patient_id = ? AND status = 'COMPLETED'`,
             [patientId]
         );
+        const totalNodes = completedAppts[0]?.total || 0;
 
-        // Guarantees active prescriptions match total completed nodes
-        const totalNodes = Math.max(completedAppts[0]?.total || 0, 1);
-        const totalPrescriptions = totalNodes;
+        // 2. Count actual prescriptions issued for completed visits
+        const [prescData] = await dbPool.execute(
+            `SELECT COUNT(*) as total FROM prescriptions p JOIN appointments a ON p.appointment_id = a.appointment_id WHERE a.patient_id = ? AND a.status = 'COMPLETED'`,
+            [patientId]
+        );
+        const totalPrescriptions = prescData[0]?.total || 0;
 
+        // 3. Fetch next upcoming appointment
         const [nextAppt] = await dbPool.execute(
-            `SELECT DATE_FORMAT(appointment_date, "%Y-%m-%d") as date, appointment_time as time 
-             FROM appointments WHERE patient_id = ? ORDER BY appointment_date DESC LIMIT 1`,
+            `SELECT DATE_FORMAT(appointment_date, "%Y-%m-%d") as date, appointment_time as time FROM appointments WHERE patient_id = ? AND appointment_date >= CURRENT_DATE AND status != 'CANCELLED' ORDER BY appointment_date ASC LIMIT 1`,
             [patientId]
         );
 
-        const nextText = nextAppt.length > 0 ? `${nextAppt[0].date} @ ${nextAppt[0].time}` : '2026-08-04 @ 09:00:00';
+        const nextText = nextAppt.length > 0 ? `${nextAppt[0].date} @ ${nextAppt[0].time}` : 'No record loaded';
 
+        // 4. Fetch upcoming appointment list
         const [appts] = await dbPool.execute(
-            `SELECT a.appointment_id, DATE_FORMAT(a.appointment_date, "%Y-%m-%d") AS appointment_date, 
+            `SELECT a.appointment_id, DATE_FORMAT(a.appointment_date, "%Y-%m-%d") AS appointment_date,
                     a.appointment_time, a.status, COALESCE(d.full_name, 'Dr. Chidi Benson') as doctor_name,
                     COALESCE(d.specialization, 'Cardiologist') as specialization
              FROM appointments a LEFT JOIN doctors d ON a.doctor_id = d.doctor_id
@@ -504,46 +510,43 @@ app.get('/api/patients/dashboard-metrics', authenticateBearerToken, restrictToRo
             },
             appointments: appts
         });
+
     } catch (err) {
         return res.status(500).json({ success: false, message: 'Metrics computation failure.' });
     }
 });
-
 // Patient Medical History / Treatment Charts (Safe query using a.appointment_date)
-app.get('/api/patients/medical-history', authenticateBearerToken, restrictToRoles('Patient'), async (req, res) => {
-    try {
-        const [pData] = await dbPool.execute('SELECT patient_id FROM patients WHERE user_id = ?', [req.userContext.userId]);
-        if (!pData || pData.length === 0) return res.json({ success: true, charts: [] });
+app.get('/api/patients/medical-history', authenticateToken, (req, res) => {
+    const patientId = req.user.patient_id || req.user.id;
 
-        const patientId = pData[0].patient_id;
+    const query = `
+        SELECT 
+            a.appointment_id,
+            a.appointment_date,
+            mr.body_temperature,
+            mr.bp_mmHg,
+            mr.heart_rate_bpm,
+            mr.clinical_notes,
+            p.medication,
+            p.dosage,
+            p.instructions,
+            d.full_name AS doctor_name,
+            d.specialization
+        FROM appointments a
+        LEFT JOIN medicalrecords mr ON a.appointment_id = mr.appointment_id
+        LEFT JOIN prescriptions p ON a.appointment_id = p.appointment_id
+        LEFT JOIN doctors d ON a.doctor_id = d.doctor_id
+        WHERE a.patient_id = ? AND a.status = 'COMPLETED'
+        ORDER BY a.appointment_date DESC
+    `;
 
-        const [charts] = await dbPool.execute(
-            `SELECT 
-                a.appointment_id as record_id,
-                DATE_FORMAT(a.appointment_date, "%b %d, %Y") as formatted_date,
-                mr.temperature,
-                mr.bp_mmHg,
-                COALESCE(mr.heart_rate_bpm, mr.pulse_rate, '72 BPM') as heart_rate_bpm,
-                mr.clinical_notes,
-                p.medication,
-                p.dosage,
-                p.instructions,
-                COALESCE(d.full_name, 'Dr. Chidi Benson') as doctor_name,
-                COALESCE(d.specialization, 'General Physician') as specialization
-             FROM appointments a
-             LEFT JOIN medicalrecords mr ON a.appointment_id = mr.appointment_id
-             LEFT JOIN prescriptions p ON a.appointment_id = p.appointment_id
-             LEFT JOIN doctors d ON a.doctor_id = d.doctor_id
-             WHERE a.patient_id = ? AND a.status = 'COMPLETED'
-             ORDER BY a.appointment_date DESC`,
-            [patientId]
-        );
-
-        return res.json({ success: true, charts: charts || [] });
-    } catch (err) {
-        console.error("Medical history extraction fault:", err);
-        return res.json({ success: true, charts: [] });
-    }
+    dbPool.query(query, [patientId], (err, results) => {
+        if (err) {
+            console.error("Medical history query error:", err);
+            return res.status(500).json({ error: "Failed to retrieve medical records" });
+        }
+        res.json(results || []);
+    });
 });
 app.post('/api/doctor/consultation/submit', authenticateBearerToken, restrictToRoles('Doctor'), async (req, res) => {
     const { appointment_id, patient_id, temperature, bp_mmHg, clinical_notes, medication, dosage, instructions } = req.body;

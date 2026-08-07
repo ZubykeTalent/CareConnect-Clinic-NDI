@@ -1456,114 +1456,92 @@ function updateWelcomeHeading(name = null) {
     }
 }
 
-// ============================================================
-// DYNAMIC PATIENT DASHBOARD & TREATMENT CHART ENGINE
-// ============================================================
+// ==========================================
+// EXACT HTML-MATCHED PATIENT ENGINE
+// ==========================================
 
-// 1. Safe Name Hydrator for Welcome Banner
-function updatePatientNameSpan(name = null) {
-    const cachedName = localStorage.getItem('user_full_name');
-    const rawName = (name && name !== 'undefined') ? name : cachedName;
+// Safely updates .patient-name-span without showing 'undefined'
+function updatePatientNameSpan(userObj = null) {
+    let name = '';
+    if (userObj) {
+        name = userObj.full_name || userObj.name || userObj.first_name || userObj.username || '';
+    }
+    if (!name || name === 'undefined') {
+        name = localStorage.getItem('user_full_name') || '';
+    }
 
-    if (rawName && rawName !== 'undefined' && rawName.trim() !== '') {
-        const cleanName = rawName.trim().replace(/^Welcome to Your Health Center Engine,\s*/i, '');
+    if (name && name !== 'undefined' && name.trim() !== '') {
+        const cleanName = name.trim();
+        localStorage.setItem('user_full_name', cleanName);
         document.querySelectorAll('.patient-name-span').forEach(span => {
             span.textContent = cleanName;
         });
     }
 }
 
-// 2. Dynamic Dashboard Metrics (Calculates 0 for new accounts like Daniel)
-async function fetchAndRenderPatientMetrics() {
+// Dynamically updates #p-metric-next, #p-metric-records, #p-metric-prescriptions
+async function loadPatientDashboardMetrics() {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     if (!token) return;
 
     try {
-        const response = await fetch('/api/patients/medical-history', {
+        const res = await fetch('/api/patients/dashboard-metrics', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
+        if (res.ok) {
+            const data = await res.json();
 
-        const nextApptEl = document.getElementById('p-metric-next');
-        const recordsCountEl = document.getElementById('p-metric-records');
-        const prescriptionsCountEl = document.getElementById('p-metric-prescriptions');
+            const nextEl = document.getElementById('p-metric-next');
+            const recordsEl = document.getElementById('p-metric-records');
+            const prescriptionsEl = document.getElementById('p-metric-prescriptions');
 
-        if (!response.ok) {
-            // Reset strictly to 0 on clean/empty accounts
-            if (nextApptEl) nextApptEl.textContent = 'No upcoming appointments';
-            if (recordsCountEl) recordsCountEl.textContent = '0 Total Nodes';
-            if (prescriptionsCountEl) prescriptionsCountEl.textContent = '0 Prescribed Items';
-            return;
-        }
-
-        const records = await response.json();
-        const recordList = Array.isArray(records) ? records : (records.data || []);
-
-        // Dynamic Counters
-        const totalMedicalRecords = recordList.length;
-        const activePrescriptions = recordList.filter(r => r.medication && r.medication.trim() !== '').length;
-
-        if (recordsCountEl) recordsCountEl.textContent = `${totalMedicalRecords} Total Nodes`;
-        if (prescriptionsCountEl) prescriptionsCountEl.textContent = `${activePrescriptions} Prescribed Items`;
-
-        // Next Appointment Logic
-        if (nextApptEl) {
-            const upcoming = recordList.find(r => r.appointment_date && new Date(r.appointment_date) > new Date());
-            if (upcoming) {
-                const dateObj = new Date(upcoming.appointment_date);
-                nextApptEl.textContent = `${dateObj.toISOString().split('T')[0]} @ ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-            } else {
-                nextApptEl.textContent = 'No upcoming appointments';
+            if (nextEl) {
+                nextEl.textContent = data.next_appointment
+                    ? new Date(data.next_appointment).toLocaleString()
+                    : 'No record loaded';
+            }
+            if (recordsEl) {
+                recordsEl.textContent = `${data.total_records || 0} Total Nodes`;
+            }
+            if (prescriptionsEl) {
+                prescriptionsEl.textContent = `${data.total_prescriptions || 0} Prescribed Items`;
             }
         }
     } catch (err) {
-        console.warn("Metrics dynamic sync warning:", err);
+        console.warn("Metrics load error:", err);
     }
 }
 
-// 3. Dynamic Treatment Charts (Includes BPM, Temp, BP, Doctor, Notes & Prescriptions)
-async function renderPatientTreatmentCharts() {
+// Injects completed treatment charts into #patient-medical-records-stack
+async function loadPatientTreatmentCharts() {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-    const container = document.getElementById('patient-treatment-charts-list') ||
-        document.querySelector('.treatment-charts-list');
-
+    const container = document.getElementById('patient-medical-records-stack');
     if (!container || !token) return;
 
     try {
-        const response = await fetch('/api/patients/medical-history', {
+        const res = await fetch('/api/patients/medical-history', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
-        if (!response.ok) {
-            container.innerHTML = `<div style="padding: 30px; text-align: center; color: #64748b;">No active medical history records found.</div>`;
+        if (!res.ok) {
+            container.innerHTML = `<p style="text-align: center; color: #64748b; padding: 20px;">No records available.</p>`;
             return;
         }
 
-        const records = await response.json();
-        const recordList = Array.isArray(records) ? records : (records.data || []);
+        const records = await res.json();
 
-        if (recordList.length === 0) {
+        if (!Array.isArray(records) || records.length === 0) {
             container.innerHTML = `
-                <div style="padding: 40px; text-align: center; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; color: #64748b;">
-                    <i class="fa-solid fa-folder-open" style="font-size: 2rem; color: #cbd5e1; margin-bottom: 10px; display: block;"></i>
+                <div style="padding: 30px; text-align: center; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; color: #64748b;">
                     No completed treatment records found for your account.
                 </div>`;
             return;
         }
 
-        container.innerHTML = recordList.map((item, index) => {
+        container.innerHTML = records.map((item, index) => {
             const formattedDate = item.appointment_date
                 ? new Date(item.appointment_date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
                 : 'Date Unspecified';
-
-            // Displays ONLY raw values submitted by the doctor on process trigger
-            const doctorName = item.doctor_name ? `${item.doctor_name}${item.specialization ? ' (' + item.specialization + ')' : ''}` : 'Attending Physician';
-            const temp = item.body_temperature ? `${item.body_temperature}` : 'Not Recorded';
-            const bp = item.bp_mmHg ? `${item.bp_mmHg}` : 'Not Recorded';
-            const bpm = item.heart_rate_bpm ? `${item.heart_rate_bpm}` : 'Not Recorded';
-            const clinicalNotes = item.clinical_notes ? item.clinical_notes : 'No clinical notes added by physician.';
-            const prescription = item.medication
-                ? `${item.medication} ${item.dosage || ''} ${item.instructions ? '— ' + item.instructions : ''}`.trim()
-                : 'No prescription issued for this encounter.';
 
             return `
                 <div class="treatment-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 16px;">
@@ -1575,36 +1553,57 @@ async function renderPatientTreatmentCharts() {
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 14px; background: #f8fafc; padding: 12px; border-radius: 8px;">
                         <div>
                             <small style="color: #64748b; font-size: 0.75rem; display: block;">Attending Physician</small>
-                            <strong style="color: #1e293b; font-size: 0.88rem;">${doctorName}</strong>
+                            <strong style="color: #1e293b; font-size: 0.88rem;">${item.doctor_name || 'Attending Physician'} ${item.specialization ? '(' + item.specialization + ')' : ''}</strong>
                         </div>
                         <div>
                             <small style="color: #64748b; font-size: 0.75rem; display: block;">Body Temp</small>
-                            <strong style="color: #1e293b; font-size: 0.88rem;"><i class="fa-solid fa-temperature-half" style="color: #ef4444;"></i> ${temp}</strong>
+                            <strong style="color: #1e293b; font-size: 0.88rem;">${item.body_temperature || 'Not Recorded'}</strong>
                         </div>
                         <div>
                             <small style="color: #64748b; font-size: 0.75rem; display: block;">Blood Pressure</small>
-                            <strong style="color: #1e293b; font-size: 0.88rem;"><i class="fa-solid fa-heart-pulse" style="color: #06b6d4;"></i> ${bp}</strong>
+                            <strong style="color: #1e293b; font-size: 0.88rem;">${item.bp_mmHg || 'Not Recorded'}</strong>
                         </div>
                         <div>
                             <small style="color: #64748b; font-size: 0.75rem; display: block;">Pulse / Heart Rate (BPM)</small>
-                            <strong style="color: #1e293b; font-size: 0.88rem;"><i class="fa-solid fa-wave-square" style="color: #10b981;"></i> ${bpm}</strong>
+                            <strong style="color: #1e293b; font-size: 0.88rem;">${item.heart_rate_bpm || 'Not Recorded'}</strong>
                         </div>
                     </div>
 
-                    <div style="border-left: 3px solid #2563eb; padding-left: 12px; margin-bottom: 12px; background: #f1f5f9; padding: 10px 12px; border-radius: 0 6px 6px 0;">
+                    <div style="border-left: 3px solid #2563eb; margin-bottom: 12px; background: #f1f5f9; padding: 10px 12px; border-radius: 0 6px 6px 0;">
                         <strong style="font-size: 0.82rem; color: #1e293b; display: block; margin-bottom: 2px;">Doctor Clinical Notes:</strong>
-                        <span style="font-size: 0.85rem; color: #334155;">${clinicalNotes}</span>
+                        <span style="font-size: 0.85rem; color: #334155;">${item.clinical_notes || 'No clinical notes added.'}</span>
                     </div>
 
                     <div style="background: #ecfdf5; border: 1px solid #a7f3d0; padding: 10px 14px; border-radius: 8px; color: #065f46; font-size: 0.85rem;">
-                        <i class="fa-solid fa-pills" style="margin-right: 6px; color: #059669;"></i>
-                        <strong>Active Prescription:</strong> ${prescription}
+                        <strong>Active Prescription:</strong> ${item.medication ? `${item.medication} ${item.dosage || ''} ${item.instructions || ''}` : 'No active prescriptions issued.'}
                     </div>
                 </div>
             `;
         }).join('');
-
     } catch (err) {
-        console.warn("Treatment chart render error:", err);
+        console.warn("Treatment chart load error:", err);
     }
 }
+
+// Global page initialization
+document.addEventListener('DOMContentLoaded', async () => {
+    updatePatientNameSpan();
+
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    if (token) {
+        try {
+            const res = await fetch('/api/profile/me', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                updatePatientNameSpan(data.user || data);
+            }
+        } catch (e) {
+            console.warn("User profile fetch warning");
+        }
+    }
+
+    loadPatientDashboardMetrics();
+    loadPatientTreatmentCharts();
+});
