@@ -1514,33 +1514,42 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// INSTANT USER NAME & WELCOME BANNER FIX
+// CLEAN WELCOME BANNER & PROFILE HYDRATOR
 // ==========================================
 
-function updatePatientWelcomeBanner(userProfile = null) {
-    // 1. Get cached name instantly from local storage
-    const cachedName = localStorage.getItem('user_full_name') || '';
-    const nameToDisplay = (userProfile && (userProfile.full_name || userProfile.name))
-        ? (userProfile.full_name || userProfile.name)
-        : cachedName;
+function updateWelcomeHeading(name = null) {
+    // 1. Fetch name from parameter or local storage
+    const savedName = localStorage.getItem('user_full_name') || '';
+    const finalName = (name && name !== 'undefined') ? name : savedName;
 
-    // 2. Target all welcome banner elements
-    const bannerElements = document.querySelectorAll('h1, h2, h3, .patient-welcome-banner h1');
+    // 2. Locate welcome banner
+    const banner = document.querySelector('#patient-welcome-heading, .patient-welcome-banner h2, h2');
 
-    bannerElements.forEach(el => {
-        if (el.textContent.includes('Welcome to Your Health Center Engine')) {
-            if (nameToDisplay && nameToDisplay.trim() !== '' && nameToDisplay !== 'undefined') {
-                el.textContent = `Welcome to Your Health Center Engine, ${nameToDisplay.trim()}!`;
-            } else {
-                // Remove undefined cleanly if name isn't loaded yet
-                el.textContent = `Welcome to Your Health Center Engine!`;
-            }
+    if (banner && banner.textContent.includes('Welcome to Your Health Center Engine')) {
+        if (finalName && finalName.trim() !== '' && finalName !== 'undefined') {
+            banner.textContent = `Welcome to Your Health Center Engine, ${finalName.trim()}!`;
+        } else {
+            // Clean fallback: Never prints "undefined!"
+            banner.textContent = `Welcome to Your Health Center Engine!`;
         }
-    });
+    }
 }
 
-// Automatically save user's full name to localStorage whenever profile data returns
-async function loadUserProfileHeader() {
+// Save user name during login response in frontend logic
+function onLoginSuccess(userData) {
+    if (userData) {
+        const fullName = userData.full_name || userData.name || userData.patient_name || '';
+        if (fullName) {
+            localStorage.setItem('user_full_name', fullName);
+            updateWelcomeHeading(fullName);
+        }
+    }
+}
+
+// Run header hydration on page load
+document.addEventListener('DOMContentLoaded', async () => {
+    updateWelcomeHeading();
+
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     if (!token) return;
 
@@ -1552,19 +1561,11 @@ async function loadUserProfileHeader() {
             const data = await res.json();
             const user = data.user || data;
             if (user && user.full_name) {
-                // Save name to local storage so next time it loads instantly
                 localStorage.setItem('user_full_name', user.full_name);
-                updatePatientWelcomeBanner(user);
+                updateWelcomeHeading(user.full_name);
             }
         }
     } catch (err) {
-        console.warn("Profile header sync bypass:", err);
+        console.warn("Header profile fetch warning:", err);
     }
-}
-
-// Run immediately on page load
-updatePatientWelcomeBanner();
-document.addEventListener('DOMContentLoaded', () => {
-    updatePatientWelcomeBanner();
-    loadUserProfileHeader();
 });

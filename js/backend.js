@@ -48,7 +48,7 @@ app.use(express.static(path.join(__dirname, '..')));
 app.use(morgan('dev'));
 app.use('/uploads', express.static(uploadsDir));
 
-// Connect to Local MySQL Pool Container utilizing XAMPP standard defaults
+// Connect to Local/Cloud MySQL Pool Container
 const dbPool = mysql.createPool({
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
@@ -56,8 +56,16 @@ const dbPool = mysql.createPool({
     database: process.env.DB_NAME || 'careconnect',
     port: process.env.DB_PORT || 3306,
     waitForConnections: true,
-    connectionLimit: 10
+    connectionLimit: 10,
+    queueLimit: 0,
+    connectTimeout: 20000 // 20s timeout allows remote cloud DB time to complete handshake
 });
+
+// Capture background pool errors gracefully so Node.js process doesn't exit on connection blips
+dbPool.on('error', (err) => {
+    console.error("⚠️ MySQL Pool Connection Warning:", err.message);
+});
+
 // DIAGNOSTIC TOOL: Force the server to test the database connection on startup
 dbPool.getConnection((err, connection) => {
     if (err) {
@@ -68,7 +76,6 @@ dbPool.getConnection((err, connection) => {
         connection.release();
     }
 });
-
 // Configure Multer Engine Instances for Profiling Image Persistences
 const storageConfig = multer.diskStorage({
     destination: (req, file, cb) => cb(null, uploadsDir),
