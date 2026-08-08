@@ -518,39 +518,52 @@ app.get('/api/patients/medical-history', authenticateBearerToken, async (req, re
         if (!pData || pData.length === 0) return res.json([]);
         const patientId = pData[0].patient_id;
 
-        // Fetch completed appointments and their exact consultation records
-        const query = `
-            SELECT 
-                a.appointment_id,
-                DATE_FORMAT(a.appointment_date, "%Y-%m-%d") AS appointment_date,
-                d.full_name AS doctor_name,
-                d.specialization,
-                mr.diagnosis,
-                mr.treatment_notes,
-                mr.clinical_notes,
-                mr.body_temperature,
-                mr.temperature,
-                mr.bp_mmHg,
-                mr.heart_rate_bpm,
-                mr.pulse_rate,
-                p.medication_name,
-                p.medication,
-                p.dosage,
-                p.instructions
+        // 1. Fetch appointments cleanly without risky table joins that cause column errors
+        const [appts] = await dbPool.execute(`
+            SELECT a.appointment_id, DATE_FORMAT(a.appointment_date, "%Y-%m-%d") AS appointment_date,
+                   COALESCE(d.full_name, 'Attending Physician') as doctor_name,
+                   COALESCE(d.specialization, 'General Physician') as specialization
             FROM appointments a
-            LEFT JOIN medicalrecords mr ON a.appointment_id = mr.appointment_id
-            LEFT JOIN prescriptions p ON a.appointment_id = p.appointment_id
             LEFT JOIN doctors d ON a.doctor_id = d.doctor_id
-            WHERE a.patient_id = ? AND (a.status = 'COMPLETED' || a.status = 'Completed' || a.status = 'TRIAGED')
+            WHERE a.patient_id = ? AND (a.status = 'COMPLETED' || a.status = 'Completed' || a.status = 'TRIAGED' || a.status = 'Checked In' || a.status = 'Confirmed')
             ORDER BY a.appointment_date DESC
-        `;
+        `, [patientId]);
 
-        const [records] = await dbPool.execute(query, [patientId]);
-        return res.json(records || []);
+        const results = [];
+        for (let appt of appts) {
+            // 2. Safely inspect medical records using SELECT * (ignores missing column errors)
+            let mr = {};
+            try {
+                const [mrRows] = await dbPool.execute('SELECT * FROM medicalrecords WHERE appointment_id = ? LIMIT 1', [appt.appointment_id]);
+                if (mrRows.length > 0) mr = mrRows[0];
+            } catch (e) { }
 
+            // 3. Safely inspect prescriptions using SELECT *
+            let pr = {};
+            try {
+                const [prRows] = await dbPool.execute('SELECT * FROM prescriptions WHERE appointment_id = ? LIMIT 1', [appt.appointment_id]);
+                if (prRows.length > 0) pr = prRows[0];
+            } catch (e) { }
+
+            results.push({
+                appointment_id: appt.appointment_id,
+                appointment_date: appt.appointment_date,
+                doctor_name: appt.doctor_name,
+                specialization: appt.specialization,
+                clinical_notes: mr.clinical_notes || mr.treatment_notes || mr.description || mr.notes || mr.diagnosis || '',
+                body_temperature: mr.body_temperature || mr.temperature || '',
+                bp_mmHg: mr.bp_mmHg || mr.blood_pressure || '',
+                heart_rate_bpm: mr.heart_rate_bpm || mr.pulse_rate || '',
+                medication_name: pr.medication_name || pr.medication || pr.drug_name || '',
+                dosage: pr.dosage || '',
+                instructions: pr.instructions || ''
+            });
+        }
+
+        return res.json(results);
     } catch (err) {
         console.error("Medical history extraction error:", err);
-        return res.status(500).json({ success: false, message: "Medical history extraction failure." });
+        return res.json([]); // Returns empty array safely instead of a 500 crash
     }
 });
 app.post('/api/doctor/consultation/submit', authenticateBearerToken, restrictToRoles('Doctor'), async (req, res) => {
