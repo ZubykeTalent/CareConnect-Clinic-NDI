@@ -1527,57 +1527,76 @@ async function loadPatientTreatmentCharts() {
         if (!Array.isArray(records) || records.length === 0) {
             container.innerHTML = `
                 <div style="padding: 30px; text-align: center; background: var(--bg-surface); border-radius: 12px; border: 1px solid var(--border-glass); color: var(--color-text-secondary);">
-                    <i class="fa-solid fa-folder-open" style="font-size: 2rem; color: var(--color-text-muted); margin-bottom: 10px; display: block;"></i>
-                    No completed treatment records found for your account.
+                    <i class="fa-solid fa-clock-rotate-left" style="font-size: 2rem; color: var(--color-text-muted); margin-bottom: 10px; display: block;"></i>
+                    Not yet prescribed or transferred by the doctor. Doctor has not yet processed the trigger.
                 </div>`;
             return;
         }
 
         container.innerHTML = records.map((r, index) => {
             const formattedDate = r.appointment_date || 'Date Unspecified';
-            const diagnosis = r.diagnosis || 'General Consultation';
-            const notes = r.treatment_notes || 'Routine clinical evaluation completed.';
-            const temp = r.body_temperature || '98.6°F';
-            const bp = r.bp_mmHg || '120/80 mmHg';
-            const bpm = r.heart_rate_bpm || '72 BPM';
-            const medication = r.medication_name || '';
+            const doctor = r.doctor_name ? `Dr. ${r.doctor_name}` : 'Attending Physician';
+            const specialization = r.specialization ? ` (${r.specialization})` : '';
+
+            // Raw fields typed by the doctor
+            const notes = r.clinical_notes || r.treatment_notes || '';
+            const temp = r.body_temperature || r.temperature || '';
+            const bp = r.bp_mmHg || '';
+            const bpm = r.heart_rate_bpm || r.pulse_rate || '';
+            const medication = r.medication_name || r.medication || '';
+            const dosage = r.dosage || '';
+            const instructions = r.instructions || '';
+
+            // If the doctor hasn't processed the trigger yet (no notes or medication typed)
+            if (!notes && !medication && !temp) {
+                return `
+                    <div class="treatment-card content-block-card glassmorphism mt-3" style="border-radius: 12px; padding: 20px; margin-bottom: 16px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid var(--border-glass); padding-bottom: 10px;">
+                            <span style="font-weight: 700; color: var(--primary-core); font-size: 1.05rem;"># Record Entry ${String(index + 1).padStart(2, '0')}</span>
+                            <span style="font-size: 0.85rem; color: var(--color-text-secondary);"><i class="fa-regular fa-calendar"></i> ${formattedDate}</span>
+                        </div>
+                        <div style="padding: 20px; text-align: center; background: var(--bg-main); border-radius: 8px; color: var(--color-text-secondary); font-size: 0.9rem;">
+                            <i class="fa-solid fa-hourglass-half" style="color: var(--warning-core); margin-right: 6px;"></i>
+                            Not yet prescribed or transferred by the doctor. Doctor has not yet processed the trigger.
+                        </div>
+                    </div>
+                `;
+            }
 
             return `
                 <div class="treatment-card content-block-card glassmorphism mt-3" style="border-radius: 12px; padding: 20px; margin-bottom: 16px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid var(--border-glass); padding-bottom: 10px;">
-                        <span style="font-weight: 700; color: var(--primary-core); font-size: 1.05rem;"># Record Entry ${String(index + 1).padStart(2, '0')} — ${diagnosis}</span>
+                        <span style="font-weight: 700; color: var(--primary-core); font-size: 1.05rem;"># Record Entry ${String(index + 1).padStart(2, '0')}</span>
                         <span style="font-size: 0.85rem; color: var(--color-text-secondary);"><i class="fa-regular fa-calendar"></i> ${formattedDate}</span>
                     </div>
                     
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 14px; background: var(--bg-main); padding: 12px; border-radius: 8px;">
                         <div>
                             <small style="color: var(--color-text-muted); font-size: 0.75rem; display: block;">Attending Physician</small>
-                            <strong style="color: var(--color-text-primary); font-size: 0.88rem;">Dr. ${r.doctor_name} (${r.specialization})</strong>
+                            <strong style="color: var(--color-text-primary); font-size: 0.88rem;">${doctor}${specialization}</strong>
                         </div>
                         <div>
                             <small style="color: var(--color-text-muted); font-size: 0.75rem; display: block;">Body Temp</small>
-                            <strong style="color: var(--color-text-primary); font-size: 0.88rem;">${temp}</strong>
+                            <strong style="color: var(--color-text-primary); font-size: 0.88rem;">${temp ? temp : 'Not Recorded'}</strong>
                         </div>
                         <div>
                             <small style="color: var(--color-text-muted); font-size: 0.75rem; display: block;">Blood Pressure</small>
-                            <strong style="color: var(--color-text-primary); font-size: 0.88rem;">${bp}</strong>
+                            <strong style="color: var(--color-text-primary); font-size: 0.88rem;">${bp || 'Not Recorded'}</strong>
                         </div>
                         <div>
                             <small style="color: var(--color-text-muted); font-size: 0.75rem; display: block;">Pulse Rate (BPM)</small>
-                            <strong style="color: var(--color-text-primary); font-size: 0.88rem;">${bpm}</strong>
+                            <strong style="color: var(--color-text-primary); font-size: 0.88rem;">${bpm || 'Not Recorded'}</strong>
                         </div>
                     </div>
 
                     <div style="border-left: 3px solid var(--primary-core); margin-bottom: 12px; background: var(--bg-main); padding: 10px 12px; border-radius: 0 6px 6px 0;">
                         <strong style="font-size: 0.82rem; color: var(--color-text-primary); display: block; margin-bottom: 2px;">Doctor Clinical Notes:</strong>
-                        <span style="font-size: 0.85rem; color: var(--color-text-secondary);">${notes}</span>
+                        <span style="font-size: 0.85rem; color: var(--color-text-secondary);">${notes || 'Not yet prescribed or transferred by the doctor. Doctor has not yet processed the trigger.'}</span>
                     </div>
 
-                    ${medication ? `
-                        <div style="background: var(--success-light); border: 1px solid rgba(22, 163, 74, 0.2); padding: 10px 14px; border-radius: 8px; color: var(--success-core); font-size: 0.85rem; margin-bottom: 12px;">
-                            <strong>Active Prescription:</strong> ${medication} — ${r.dosage} (${r.instructions})
-                        </div>
-                    ` : ''}
+                    <div style="background: var(--success-light); border: 1px solid rgba(22, 163, 74, 0.2); padding: 10px 14px; border-radius: 8px; color: var(--success-core); font-size: 0.85rem; margin-bottom: 12px;">
+                        <strong>Active Prescription:</strong> ${medication ? `${medication} — ${dosage} (${instructions})` : 'Not yet prescribed or transferred by the doctor. Doctor has not yet processed the trigger.'}
+                    </div>
 
                     <button class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="window.print()">
                         <i class="fa-solid fa-download"></i> Print Diagnostics Report Sheet
@@ -1587,9 +1606,10 @@ async function loadPatientTreatmentCharts() {
         }).join('');
 
     } catch (err) {
-        console.warn("Treatment chart render error:", err);
+        container.innerHTML = `
+            <div style="padding: 30px; text-align: center; background: var(--bg-surface); border-radius: 12px; border: 1px solid var(--border-glass); color: var(--color-text-secondary);">
+                Not yet prescribed or transferred by the doctor. Doctor has not yet processed the trigger.
+            </div>`;
     }
 }
-
-// Map both function names so regardless of which one the router triggers, it works seamlessly:
 window.fetchPatientComprehensiveMedicalRecords = loadPatientTreatmentCharts;
