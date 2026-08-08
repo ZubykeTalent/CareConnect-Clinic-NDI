@@ -1530,8 +1530,8 @@ async function loadPatientTreatmentCharts() {
         if (!Array.isArray(records) || records.length === 0) {
             container.innerHTML = `
                 <div style="padding: 30px; text-align: center; background: var(--bg-surface); border-radius: 12px; border: 1px solid var(--border-glass); color: var(--color-text-secondary);">
-                    <i class="fa-solid fa-clock-rotate-left" style="font-size: 2rem; color: var(--color-text-muted); margin-bottom: 10px; display: block;"></i>
-                    Not yet prescribed or transferred by the doctor. Doctor has not yet processed the trigger.
+                    <i class="fa-solid fa-folder-open" style="font-size: 2rem; color: var(--color-text-muted); margin-bottom: 10px; display: block;"></i>
+                    No completed treatment records found for your account.
                 </div>`;
             return;
         }
@@ -1541,8 +1541,9 @@ async function loadPatientTreatmentCharts() {
             const doctor = r.doctor_name ? `Dr. ${r.doctor_name}` : 'Attending Physician';
             const specialization = r.specialization ? ` (${r.specialization})` : '';
 
-            // Raw fields typed by the doctor
-            const notes = r.clinical_notes || r.treatment_notes || '';
+            // Exact fields submitted by the doctor during the process trigger
+            const diagnosis = r.diagnosis || '';
+            const notes = r.treatment_notes || r.clinical_notes || '';
             const temp = r.body_temperature || r.temperature || '';
             const bp = r.bp_mmHg || '';
             const bpm = r.heart_rate_bpm || r.pulse_rate || '';
@@ -1550,8 +1551,8 @@ async function loadPatientTreatmentCharts() {
             const dosage = r.dosage || '';
             const instructions = r.instructions || '';
 
-            // If the doctor hasn't processed the trigger yet (no notes or medication typed)
-            if (!notes && !medication && !temp) {
+            // If the doctor hasn't filled out the process trigger yet
+            if (!notes && !medication && !diagnosis) {
                 return `
                     <div class="treatment-card content-block-card glassmorphism mt-3" style="border-radius: 12px; padding: 20px; margin-bottom: 16px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid var(--border-glass); padding-bottom: 10px;">
@@ -1569,7 +1570,9 @@ async function loadPatientTreatmentCharts() {
             return `
                 <div class="treatment-card content-block-card glassmorphism mt-3" style="border-radius: 12px; padding: 20px; margin-bottom: 16px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid var(--border-glass); padding-bottom: 10px;">
-                        <span style="font-weight: 700; color: var(--primary-core); font-size: 1.05rem;"># Record Entry ${String(index + 1).padStart(2, '0')}</span>
+                        <span style="font-weight: 700; color: var(--primary-core); font-size: 1.05rem;">
+                            # Record Entry ${String(index + 1).padStart(2, '0')} ${diagnosis ? '— Diagnosis: ' + diagnosis : ''}
+                        </span>
                         <span style="font-size: 0.85rem; color: var(--color-text-secondary);"><i class="fa-regular fa-calendar"></i> ${formattedDate}</span>
                     </div>
                     
@@ -1580,7 +1583,7 @@ async function loadPatientTreatmentCharts() {
                         </div>
                         <div>
                             <small style="color: var(--color-text-muted); font-size: 0.75rem; display: block;">Body Temp</small>
-                            <strong style="color: var(--color-text-primary); font-size: 0.88rem;">${temp ? temp : 'Not Recorded'}</strong>
+                            <strong style="color: var(--color-text-primary); font-size: 0.88rem;">${temp || 'Not Recorded'}</strong>
                         </div>
                         <div>
                             <small style="color: var(--color-text-muted); font-size: 0.75rem; display: block;">Blood Pressure</small>
@@ -1593,13 +1596,19 @@ async function loadPatientTreatmentCharts() {
                     </div>
 
                     <div style="border-left: 3px solid var(--primary-core); margin-bottom: 12px; background: var(--bg-main); padding: 10px 12px; border-radius: 0 6px 6px 0;">
-                        <strong style="font-size: 0.82rem; color: var(--color-text-primary); display: block; margin-bottom: 2px;">Doctor Clinical Notes:</strong>
-                        <span style="font-size: 0.85rem; color: var(--color-text-secondary);">${notes || 'Not yet prescribed or transferred by the doctor. Doctor has not yet processed the trigger.'}</span>
+                        <strong style="font-size: 0.82rem; color: var(--color-text-primary); display: block; margin-bottom: 2px;">Doctor Clinical Notes & Findings:</strong>
+                        <span style="font-size: 0.85rem; color: var(--color-text-secondary);">${notes || 'No clinical notes added.'}</span>
                     </div>
 
-                    <div style="background: var(--success-light); border: 1px solid rgba(22, 163, 74, 0.2); padding: 10px 14px; border-radius: 8px; color: var(--success-core); font-size: 0.85rem; margin-bottom: 12px;">
-                        <strong>Active Prescription:</strong> ${medication ? `${medication} — ${dosage} (${instructions})` : 'Not yet prescribed or transferred by the doctor. Doctor has not yet processed the trigger.'}
-                    </div>
+                    ${medication ? `
+                        <div style="background: var(--success-light); border: 1px solid rgba(22, 163, 74, 0.2); padding: 10px 14px; border-radius: 8px; color: var(--success-core); font-size: 0.85rem; margin-bottom: 12px;">
+                            <strong>Active Prescription:</strong> ${medication} ${dosage ? '— ' + dosage : ''} ${instructions ? '(' + instructions + ')' : ''}
+                        </div>
+                    ` : `
+                        <div style="background: var(--bg-main); border: 1px solid var(--border-glass); padding: 10px 14px; border-radius: 8px; color: var(--color-text-secondary); font-size: 0.85rem; margin-bottom: 12px;">
+                            <strong>Active Prescription:</strong> None prescribed for this encounter.
+                        </div>
+                    `}
 
                     <button class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="window.print()">
                         <i class="fa-solid fa-download"></i> Print Diagnostics Report Sheet

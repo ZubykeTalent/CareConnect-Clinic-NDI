@@ -518,50 +518,39 @@ app.get('/api/patients/medical-history', authenticateBearerToken, async (req, re
         if (!pData || pData.length === 0) return res.json([]);
         const patientId = pData[0].patient_id;
 
-        // Fetch completed appointments for this patient safely
-        const [appts] = await dbPool.execute(`
-            SELECT a.appointment_id, DATE_FORMAT(a.appointment_date, "%Y-%m-%d") AS appointment_date,
-                   COALESCE(d.full_name, 'Attending Physician') as doctor_name,
-                   COALESCE(d.specialization, 'General Physician') as specialization
+        // Fetch completed appointments and their exact consultation records
+        const query = `
+            SELECT 
+                a.appointment_id,
+                DATE_FORMAT(a.appointment_date, "%Y-%m-%d") AS appointment_date,
+                d.full_name AS doctor_name,
+                d.specialization,
+                mr.diagnosis,
+                mr.treatment_notes,
+                mr.clinical_notes,
+                mr.body_temperature,
+                mr.temperature,
+                mr.bp_mmHg,
+                mr.heart_rate_bpm,
+                mr.pulse_rate,
+                p.medication_name,
+                p.medication,
+                p.dosage,
+                p.instructions
             FROM appointments a
+            LEFT JOIN medicalrecords mr ON a.appointment_id = mr.appointment_id
+            LEFT JOIN prescriptions p ON a.appointment_id = p.appointment_id
             LEFT JOIN doctors d ON a.doctor_id = d.doctor_id
             WHERE a.patient_id = ? AND (a.status = 'COMPLETED' || a.status = 'Completed' || a.status = 'TRIAGED')
             ORDER BY a.appointment_date DESC
-        `, [patientId]);
+        `;
 
-        const results = [];
-        for (let appt of appts) {
-            let mr = {};
-            try {
-                const [mrRows] = await dbPool.execute('SELECT * FROM medicalrecords WHERE appointment_id = ? LIMIT 1', [appt.appointment_id]);
-                if (mrRows.length > 0) mr = mrRows[0];
-            } catch (e) { }
+        const [records] = await dbPool.execute(query, [patientId]);
+        return res.json(records || []);
 
-            let pr = {};
-            try {
-                const [prRows] = await dbPool.execute('SELECT * FROM prescriptions WHERE appointment_id = ? LIMIT 1', [appt.appointment_id]);
-                if (prRows.length > 0) pr = prRows[0];
-            } catch (e) { }
-
-            results.push({
-                appointment_id: appt.appointment_id,
-                appointment_date: appt.appointment_date,
-                doctor_name: appt.doctor_name,
-                specialization: appt.specialization,
-                clinical_notes: mr.clinical_notes || mr.treatment_notes || mr.description || mr.notes || '',
-                body_temperature: mr.body_temperature || mr.temperature || '',
-                bp_mmHg: mr.bp_mmHg || mr.blood_pressure || '',
-                heart_rate_bpm: mr.heart_rate_bpm || mr.pulse_rate || '',
-                medication_name: pr.medication_name || pr.medication || pr.drug_name || '',
-                dosage: pr.dosage || '',
-                instructions: pr.instructions || ''
-            });
-        }
-
-        return res.json(results);
     } catch (err) {
         console.error("Medical history extraction error:", err);
-        return res.json([]);
+        return res.status(500).json({ success: false, message: "Medical history extraction failure." });
     }
 });
 app.post('/api/doctor/consultation/submit', authenticateBearerToken, restrictToRoles('Doctor'), async (req, res) => {
