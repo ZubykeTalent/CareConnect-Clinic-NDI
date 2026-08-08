@@ -518,52 +518,90 @@ app.get('/api/patients/medical-history', authenticateBearerToken, async (req, re
         if (!pData || pData.length === 0) return res.json([]);
         const patientId = pData[0].patient_id;
 
-        // 1. Fetch appointments cleanly without risky table joins that cause column errors
+        // 1. Fetch appointments for this patient
         const [appts] = await dbPool.execute(`
             SELECT a.appointment_id, DATE_FORMAT(a.appointment_date, "%Y-%m-%d") AS appointment_date,
                    COALESCE(d.full_name, 'Attending Physician') as doctor_name,
                    COALESCE(d.specialization, 'General Physician') as specialization
             FROM appointments a
             LEFT JOIN doctors d ON a.doctor_id = d.doctor_id
-            WHERE a.patient_id = ? AND (a.status = 'COMPLETED' || a.status = 'Completed' || a.status = 'TRIAGED' || a.status = 'Checked In' || a.status = 'Confirmed')
+            WHERE a.patient_id = ?
             ORDER BY a.appointment_date DESC
         `, [patientId]);
 
         const results = [];
+
         for (let appt of appts) {
-            // 2. Safely inspect medical records using SELECT * (ignores missing column errors)
             let mr = {};
             try {
+                // Check medical records by appointment_id FIRST
                 const [mrRows] = await dbPool.execute('SELECT * FROM medicalrecords WHERE appointment_id = ? LIMIT 1', [appt.appointment_id]);
                 if (mrRows.length > 0) mr = mrRows[0];
             } catch (e) { }
 
-            // 3. Safely inspect prescriptions using SELECT *
+            // Fallback: If empty, check medical records by patient_id
+            if (!mr.clinical_notes && !mr.treatment_notes && !mr.description && !mr.notes && !mr.diagnosis) {
+                try {
+                    const [patMrRows] = await dbPool.execute('SELECT * FROM medicalrecords WHERE patient_id = ? ORDER BY record_id DESC LIMIT 1', [patientId]);
+                    if (patMrRows.length > 0) mr = patMrRows[0];
+                } catch (e) { }
+            }
+
             let pr = {};
             try {
                 const [prRows] = await dbPool.execute('SELECT * FROM prescriptions WHERE appointment_id = ? LIMIT 1', [appt.appointment_id]);
                 if (prRows.length > 0) pr = prRows[0];
             } catch (e) { }
 
-            results.push({
-                appointment_id: appt.appointment_id,
-                appointment_date: appt.appointment_date,
-                doctor_name: appt.doctor_name,
-                specialization: appt.specialization,
-                clinical_notes: mr.clinical_notes || mr.treatment_notes || mr.description || mr.notes || mr.diagnosis || '',
-                body_temperature: mr.body_temperature || mr.temperature || '',
-                bp_mmHg: mr.bp_mmHg || mr.blood_pressure || '',
-                heart_rate_bpm: mr.heart_rate_bpm || mr.pulse_rate || '',
-                medication_name: pr.medication_name || pr.medication || pr.drug_name || '',
-                dosage: pr.dosage || '',
-                instructions: pr.instructions || ''
-            });
+            // Only push to results if there is actual recorded text
+            const notes = mr.clinical_notes || mr.treatment_notes || mr.description || mr.notes || mr.diagnosis || '';
+            const medication = pr.medication_name || pr.medication || pr.drug_name || '';
+
+            if (notes || medication || mr.body_temperature || mr.temperature) {
+                results.push({
+                    appointment_id: appt.appointment_id,
+                    appointment_date: appt.appointment_date,
+                    doctor_name: appt.doctor_name,
+                    specialization: appt.specialization,
+                    clinical_notes: notes,
+                    body_temperature: mr.body_temperature || mr.temperature || '',
+                    bp_mmHg: mr.bp_mmHg || mr.blood_pressure || '',
+                    heart_rate_bpm: mr.heart_rate_bpm || mr.pulse_rate || '',
+                    medication_name: medication,
+                    dosage: pr.dosage || '',
+                    instructions: pr.instructions || ''
+                });
+            }
+        }
+
+        // If no appointment-linked records were found, check for any standalone patient medical records
+        if (results.length === 0) {
+            try {
+                const [directRows] = await dbPool.execute('SELECT * FROM medicalrecords WHERE patient_id = ?', [patientId]);
+                if (directRows.length > 0) {
+                    for (let dr of directRows) {
+                        results.push({
+                            appointment_id: dr.appointment_id || 1,
+                            appointment_date: dr.record_date || dr.created_at ? new Date(dr.record_date || dr.created_at).toISOString().split('T')[0] : 'Recent Record',
+                            doctor_name: 'Attending Physician',
+                            specialization: 'General Clinical Care',
+                            clinical_notes: dr.clinical_notes || dr.treatment_notes || dr.description || dr.notes || dr.diagnosis || 'Clinical evaluation logged.',
+                            body_temperature: dr.body_temperature || dr.temperature || '',
+                            bp_mmHg: dr.bp_mmHg || dr.blood_pressure || '',
+                            heart_rate_bpm: dr.heart_rate_bpm || dr.pulse_rate || '',
+                            medication_name: '',
+                            dosage: '',
+                            instructions: ''
+                        });
+                    }
+                }
+            } catch (e) { }
         }
 
         return res.json(results);
     } catch (err) {
         console.error("Medical history extraction error:", err);
-        return res.json([]); // Returns empty array safely instead of a 500 crash
+        return res.json([]);
     }
 });
 app.post('/api/doctor/consultation/submit', authenticateBearerToken, restrictToRoles('Doctor'), async (req, res) => {
