@@ -729,6 +729,12 @@ async function handleAppointmentBookingSubmission(e) {
         });
         showToast('Appointment pipeline locked successfully. Awaiting front-desk authorization.');
         document.getElementById('patient-appointment-booking-form').reset();
+
+        // 💡 Instantly fetch notifications so the bell lights up right away!
+        if (typeof fetchAndRenderNotifications === 'function') {
+            fetchAndRenderNotifications();
+        }
+
         navigateToDashboardView('patient-home');
     } catch (err) { }
 }
