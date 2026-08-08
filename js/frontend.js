@@ -931,14 +931,17 @@ function executeCryptographicAuditLogMining(logs) {
 
 // PROFILE AND NOTIFICATION COMMON ARCHITECTURAL LOGIC PANES
 async function populateIdentityProfileUpdateFormFields() {
-    if (!AppState.user) {
-        try {
-            const data = await executeSecureAPIRequest('/profile/me', { method: 'GET' });
-            AppState.user = data.user;
-        } catch (e) {
-            return;
+    try {
+        // Always fetch fresh profile details directly from the server API on view load
+        const response = await executeSecureAPIRequest('/profile/me', { method: 'GET' });
+        if (response && response.user) {
+            AppState.user = response.user;
         }
+    } catch (e) {
+        console.warn("Profile fetch sync warning");
     }
+
+    if (!AppState.user) return;
 
     const nameField = document.getElementById('prof-name');
     const emailField = document.getElementById('prof-email');
