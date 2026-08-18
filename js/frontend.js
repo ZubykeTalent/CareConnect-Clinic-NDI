@@ -1364,59 +1364,50 @@ document.addEventListener('DOMContentLoaded', () => {
 // DYNAMIC NOTIFICATION ENGINE & UI SANITIZER
 // ==========================================
 
+// ==========================================
+// 4. DYNAMIC NOTIFICATION ENGINE (FRONTEND)
+// ==========================================
 async function fetchAndRenderNotifications() {
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     const badge = document.getElementById('bell-count-badge');
     const itemsList = document.getElementById('notification-items-list');
 
-    // 1. Start at 0 so blank users don't see fake notifications
     let unreadCount = 0;
     let list = [];
 
-    if (token) {
-        try {
-            // 2. Fetch specific notifications for the logged-in user
-            const response = await fetch('/api/profile/notifications', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                list = data.notifications || data.data || (Array.isArray(data) ? data : []);
-                unreadCount = list.length;
-            }
-        } catch (err) {
-            console.warn("Notification sync fallback active");
-        }
+    // Use our global secure request wrapper to guarantee the token is sent
+    try {
+        const data = await executeSecureAPIRequest('/profile/notifications', { method: 'GET' });
+        list = data.notifications || data.data || (Array.isArray(data) ? data : []);
+        unreadCount = list.length;
+    } catch (err) {
+        console.warn("Notification sync fallback active");
     }
 
-    // 3. Safely update the red badge counter
     if (badge) {
         badge.textContent = String(unreadCount);
         if (unreadCount > 0) {
             badge.classList.remove('hidden');
-            badge.style.setProperty('display', 'inline-block', 'important');
+            badge.style.setProperty('display', 'flex', 'important');
         } else {
             badge.classList.add('hidden');
             badge.style.setProperty('display', 'none', 'important');
         }
     }
 
-    // 4. Populate the dropdown list dynamically
     if (itemsList) {
         if (unreadCount > 0) {
             itemsList.innerHTML = list.map(item => `
-                <div class="notification-item" style="padding: 10px 14px; border-bottom: 1px solid #f1f5f9;">
-                    <div style="font-weight: 600; font-size: 0.88rem; color: #1e293b;">
+                <div class="notification-item" style="padding: 10px 14px; border-bottom: 1px solid var(--border-glass);">
+                    <div style="font-weight: 700; font-size: 0.88rem; color: var(--primary-core);">
                         ${item.title || item.type || 'System Alert'}
                     </div>
-                    <div style="font-size: 0.82rem; color: #475569; margin-top: 2px;">
+                    <div style="font-size: 0.85rem; color: var(--color-text-secondary); margin-top: 4px;">
                         ${item.message || item.content || 'Medical record updated.'}
                     </div>
                 </div>
             `).join('');
         } else {
-            itemsList.innerHTML = `<div style="padding: 15px; text-align: center; color: #64748b; font-size: 0.85rem;">No active notifications pending.</div>`;
+            itemsList.innerHTML = `<div style="padding: 15px; text-align: center; color: var(--color-text-secondary); font-size: 0.85rem;">No active notifications pending.</div>`;
         }
     }
 }

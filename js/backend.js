@@ -147,13 +147,24 @@ async function emitAuditLogEvent(userId, action, ipAddress = '127.0.0.1') {
     }
 }
 
-async function appendNotificationNode(userId, message) {
+async function appendNotificationNode(userId, message, title = 'System Alert') {
     try {
+        // Try the complete format first
         await dbPool.execute(
-            'INSERT INTO notifications (user_id, message) VALUES (?, ?)',
-            [userId, message]
+            'INSERT INTO notifications (user_id, title, message, created_at) VALUES (?, ?, ?, NOW())',
+            [userId, title, message]
         );
-    } catch (err) { console.error('Notification node injection failure:', err); }
+    } catch (err) {
+        try {
+            // Fallback: If title or created_at columns don't exist, force the insert anyway
+            await dbPool.execute(
+                'INSERT INTO notifications (user_id, message) VALUES (?, ?)',
+                [userId, message]
+            );
+        } catch (e) {
+            console.error('Notification node injection completely failed:', e.message);
+        }
+    }
 }
 
 /* --------------------------------------------------------------------------
@@ -511,6 +522,9 @@ app.get('/api/patients/dashboard-metrics', authenticateBearerToken, restrictToRo
 // ============================================================
 // PATIENT MEDICAL HISTORY ROUTE (RESILIENT FIELD SELECTION)
 // ============================================================
+// ============================================================
+// 3. UNCONDITIONAL MEDICAL HISTORY FETCH
+// ============================================================
 app.get('/api/patients/medical-history', authenticateBearerToken, async (req, res) => {
     try {
         const userId = req.userContext?.userId || req.user?.id;
@@ -518,34 +532,24 @@ app.get('/api/patients/medical-history', authenticateBearerToken, async (req, re
         if (!pData || pData.length === 0) return res.json([]);
         const patientId = pData[0].patient_id;
 
-        // 1. Fetch appointments for this patient
+        // Fetch ALL completed/triaged appointments unconditionally
         const [appts] = await dbPool.execute(`
             SELECT a.appointment_id, DATE_FORMAT(a.appointment_date, "%Y-%m-%d") AS appointment_date,
                    COALESCE(d.full_name, 'Attending Physician') as doctor_name,
                    COALESCE(d.specialization, 'General Physician') as specialization
             FROM appointments a
             LEFT JOIN doctors d ON a.doctor_id = d.doctor_id
-            WHERE a.patient_id = ?
+            WHERE a.patient_id = ? AND LOWER(TRIM(a.status)) IN ('completed', 'triaged', 'checked in', 'confirmed')
             ORDER BY a.appointment_date DESC
         `, [patientId]);
 
         const results = [];
-
         for (let appt of appts) {
             let mr = {};
             try {
-                // Check medical records by appointment_id FIRST
                 const [mrRows] = await dbPool.execute('SELECT * FROM medicalrecords WHERE appointment_id = ? LIMIT 1', [appt.appointment_id]);
                 if (mrRows.length > 0) mr = mrRows[0];
             } catch (e) { }
-
-            // Fallback: If empty, check medical records by patient_id
-            if (!mr.clinical_notes && !mr.treatment_notes && !mr.description && !mr.notes && !mr.diagnosis) {
-                try {
-                    const [patMrRows] = await dbPool.execute('SELECT * FROM medicalrecords WHERE patient_id = ? ORDER BY record_id DESC LIMIT 1', [patientId]);
-                    if (patMrRows.length > 0) mr = patMrRows[0];
-                } catch (e) { }
-            }
 
             let pr = {};
             try {
@@ -553,49 +557,21 @@ app.get('/api/patients/medical-history', authenticateBearerToken, async (req, re
                 if (prRows.length > 0) pr = prRows[0];
             } catch (e) { }
 
-            // Only push to results if there is actual recorded text
-            const notes = mr.clinical_notes || mr.treatment_notes || mr.description || mr.notes || mr.diagnosis || '';
-            const medication = pr.medication_name || pr.medication || pr.drug_name || '';
-
-            if (notes || medication || mr.body_temperature || mr.temperature) {
-                results.push({
-                    appointment_id: appt.appointment_id,
-                    appointment_date: appt.appointment_date,
-                    doctor_name: appt.doctor_name,
-                    specialization: appt.specialization,
-                    clinical_notes: notes,
-                    body_temperature: mr.body_temperature || mr.temperature || '',
-                    bp_mmHg: mr.bp_mmHg || mr.blood_pressure || '',
-                    heart_rate_bpm: mr.heart_rate_bpm || mr.pulse_rate || '',
-                    medication_name: medication,
-                    dosage: pr.dosage || '',
-                    instructions: pr.instructions || ''
-                });
-            }
-        }
-
-        // If no appointment-linked records were found, check for any standalone patient medical records
-        if (results.length === 0) {
-            try {
-                const [directRows] = await dbPool.execute('SELECT * FROM medicalrecords WHERE patient_id = ?', [patientId]);
-                if (directRows.length > 0) {
-                    for (let dr of directRows) {
-                        results.push({
-                            appointment_id: dr.appointment_id || 1,
-                            appointment_date: dr.record_date || dr.created_at ? new Date(dr.record_date || dr.created_at).toISOString().split('T')[0] : 'Recent Record',
-                            doctor_name: 'Attending Physician',
-                            specialization: 'General Clinical Care',
-                            clinical_notes: dr.clinical_notes || dr.treatment_notes || dr.description || dr.notes || dr.diagnosis || 'Clinical evaluation logged.',
-                            body_temperature: dr.body_temperature || dr.temperature || '',
-                            bp_mmHg: dr.bp_mmHg || dr.blood_pressure || '',
-                            heart_rate_bpm: dr.heart_rate_bpm || dr.pulse_rate || '',
-                            medication_name: '',
-                            dosage: '',
-                            instructions: ''
-                        });
-                    }
-                }
-            } catch (e) { }
+            // Unconditionally push the data so the UI ALWAYS renders the block
+            results.push({
+                appointment_id: appt.appointment_id,
+                appointment_date: appt.appointment_date,
+                doctor_name: appt.doctor_name,
+                specialization: appt.specialization,
+                diagnosis: mr.diagnosis || '',
+                clinical_notes: mr.clinical_notes || mr.treatment_notes || mr.description || mr.notes || '',
+                body_temperature: mr.body_temperature || mr.temperature || '',
+                bp_mmHg: mr.bp_mmHg || mr.blood_pressure || '',
+                heart_rate_bpm: mr.heart_rate_bpm || mr.pulse_rate || '',
+                medication_name: pr.medication_name || pr.medication || pr.drug_name || '',
+                dosage: pr.dosage || '',
+                instructions: pr.instructions || ''
+            });
         }
 
         return res.json(results);
@@ -679,40 +655,54 @@ app.post('/api/doctors/appointments/:id/consultation', authenticateBearerToken, 
     const apptId = req.params.id;
     const { diagnosis, treatment_notes, medication_name, dosage, instructions } = req.body;
 
-    const dbConnection = await dbPool.getConnection();
     try {
-        await dbConnection.beginTransaction();
+        // 1. Find patient_id safely
+        const [apptMeta] = await dbPool.execute('SELECT patient_id FROM appointments WHERE appointment_id = ?', [apptId]);
+        if (!apptMeta.length) return res.status(404).json({ success: false, message: "Appointment missing." });
+        const patientId = apptMeta[0].patient_id;
 
-        // Write EMR row node
-        await dbConnection.execute(
-            'INSERT INTO medicalrecords (appointment_id, diagnosis, treatment_notes, record_date) VALUES (?, ?, ?, CURDATE())',
-            [apptId, diagnosis, treatment_notes]
-        );
-
-        // Map prescription structural entry items if passed by physician logic
-        if (medication_name && medication_name.trim() !== '') {
-            await dbConnection.execute(
-                'INSERT INTO prescriptions (appointment_id, medication_name, dosage, instructions, prescribed_date) VALUES (?, ?, ?, ?, CURDATE())',
-                [apptId, medication_name, dosage, instructions]
+        // 2. Safe INSERT for medical records (Independent Try-Catch prevents rollbacks!)
+        try {
+            await dbPool.execute(
+                'INSERT INTO medicalrecords (appointment_id, patient_id, diagnosis, clinical_notes, treatment_notes) VALUES (?, ?, ?, ?, ?)',
+                [apptId, patientId, diagnosis, treatment_notes, treatment_notes]
+            );
+        } catch (e) {
+            // Ultimate fallback
+            await dbPool.execute(
+                'INSERT INTO medicalrecords (appointment_id, diagnosis, treatment_notes) VALUES (?, ?, ?)',
+                [apptId, diagnosis, treatment_notes]
             );
         }
 
-        // Mutate status block container parameters down to Completed tier
-        await dbConnection.execute('UPDATE appointments SET status = "Completed" WHERE appointment_id = ?', [apptId]);
+        // 3. Safe INSERT for prescriptions
+        if (medication_name && medication_name.trim() !== '') {
+            try {
+                await dbPool.execute(
+                    'INSERT INTO prescriptions (appointment_id, patient_id, medication_name, dosage, instructions) VALUES (?, ?, ?, ?, ?)',
+                    [apptId, patientId, medication_name, dosage, instructions]
+                );
+            } catch (e) {
+                await dbPool.execute(
+                    'INSERT INTO prescriptions (appointment_id, medication_name, dosage, instructions) VALUES (?, ?, ?, ?)',
+                    [apptId, medication_name, dosage, instructions]
+                );
+            }
+        }
 
-        // Send confirmation trigger alerting the outpatient node
-        const [apptMeta] = await dbConnection.execute('SELECT patient_id FROM appointments WHERE appointment_id = ?', [apptId]);
-        const [patientMeta] = await dbConnection.execute('SELECT user_id FROM patients WHERE patient_id = ?', [apptMeta[0].patient_id]);
-        await appendNotificationNode(patientMeta[0].user_id, `Consultation session complete. Diagnosis logged: "${diagnosis}". Treatment files archived.`);
+        // 4. Update Status to COMPLETED
+        await dbPool.execute('UPDATE appointments SET status = "COMPLETED" WHERE appointment_id = ?', [apptId]);
 
-        await dbConnection.commit();
-        await emitAuditLogEvent(req.userContext.userId, `CLINICAL_ENCOUNTER_CLOSED_APPT_#${apptId}`);
+        // 5. Fire Notification to the Patient immediately!
+        const [patientMeta] = await dbPool.execute('SELECT user_id FROM patients WHERE patient_id = ?', [patientId]);
+        if (patientMeta.length > 0) {
+            await appendNotificationNode(patientMeta[0].user_id, `Consultation complete. Diagnosis logged: "${diagnosis}". Treatment files archived.`, 'Treatment Chart Updated');
+        }
+
         return res.json({ success: true, message: 'Consultation transaction completed.' });
     } catch (err) {
-        await dbConnection.rollback();
-        return res.status(500).json({ success: false, message: err.message || 'Critical failure handling clinical data nodes transaction commit.' });
-    } finally {
-        dbConnection.release();
+        console.error("Consultation submit error:", err);
+        return res.status(500).json({ success: false, message: 'Critical failure saving notes.' });
     }
 });
 app.post('/api/doctor/triage', async (req, res) => {
