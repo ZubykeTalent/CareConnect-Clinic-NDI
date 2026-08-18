@@ -272,30 +272,36 @@ function toggleThemeMode() {
    3. CLIENT ASYNC REQUEST TRANSMISSION & RESPONSE WRAPPERS
    -------------------------------------------------------------------------- */
 async function executeSecureAPIRequest(endpoint, options = {}) {
-    setLoadingState(true);
+    // Only show loading spinner for non-silent (user-initiated) requests
+    if (!options.silent) setLoadingState(true);
+
     const url = `${API_BASE_URL}${endpoint}`;
 
     options.headers = options.headers || {};
-    if (AppState.token) {
-        options.headers['Authorization'] = `Bearer ${AppState.token}`;
+    const token = getAuthToken(); // Uses our unified token helper
+    if (token) {
+        options.headers['Authorization'] = `Bearer ${token}`;
     }
 
     try {
         const response = await fetch(url, options);
         const data = await response.json();
-        setLoadingState(false);
+        if (!options.silent) setLoadingState(false);
 
         if (!response.ok) {
             throw new Error(data.message || `HTTP Execution Collision Error: Code ${response.status}`);
         }
         return data;
     } catch (err) {
-        setLoadingState(false);
-        showToast(err.message, 'danger');
+        if (!options.silent) setLoadingState(false);
+
+        // 💡 SILENT FLAG: Only flash the red toast if this wasn't a background polling task
+        if (!options.silent) {
+            showToast(err.message, 'danger');
+        }
         throw err;
     }
 }
-
 function setLoadingState(isLoading) {
     const spinner = document.getElementById('global-spinner');
     if (!spinner) return;
@@ -404,9 +410,9 @@ async function handleRegistrationSubmission(event) {
     }
 }
 async function checkExistingSession() {
-    if (!AppState.token) return;
+    if (!getAuthToken()) return;
     try {
-        const data = await executeSecureAPIRequest('/profile/me', { method: 'GET' });
+        const data = await executeSecureAPIRequest('/profile/me', { method: 'GET', silent: true });
         AppState.user = data.user;
         AppState.activeRole = data.user.role_name;
         launchApplicationDashboard();
@@ -1360,23 +1366,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// ==========================================
-// DYNAMIC NOTIFICATION ENGINE & UI SANITIZER
-// ==========================================
 
 // ==========================================
-// 4. DYNAMIC NOTIFICATION ENGINE (FRONTEND)
+// DYNAMIC NOTIFICATION ENGINE (FRONTEND)
 // ==========================================
 async function fetchAndRenderNotifications() {
+    // 1. EARLY EXIT: If the user is not logged in, stop immediately! (Prevents landing page errors)
+    const token = getAuthToken();
+    if (!token) return;
+
     const badge = document.getElementById('bell-count-badge');
     const itemsList = document.getElementById('notification-items-list');
 
     let unreadCount = 0;
     let list = [];
 
-    // Use our global secure request wrapper to guarantee the token is sent
+    // 2. Use silent: true so background polls never trigger red error toasts
     try {
-        const data = await executeSecureAPIRequest('/profile/notifications', { method: 'GET' });
+        const data = await executeSecureAPIRequest('/profile/notifications', { method: 'GET', silent: true });
         list = data.notifications || data.data || (Array.isArray(data) ? data : []);
         unreadCount = list.length;
     } catch (err) {
@@ -1411,7 +1418,6 @@ async function fetchAndRenderNotifications() {
         }
     }
 }
-
 // 5. UI Sanitizer to permanently wipe "undefined!" from headers
 function sanitizeDashboardUI() {
     const elements = document.querySelectorAll('h1, h2, h3, h4, h5, p, span, div');
