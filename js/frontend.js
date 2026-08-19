@@ -1395,29 +1395,54 @@ document.addEventListener('DOMContentLoaded', () => {
 // ==========================================
 // DYNAMIC NOTIFICATION ENGINE (FRONTEND)
 // ==========================================
+// ==========================================
+// DYNAMIC NOTIFICATION ENGINE (FRONTEND)
+// ==========================================
 async function fetchAndRenderNotifications() {
-    // 1. EARLY EXIT: If the user is not logged in, stop immediately! (Prevents landing page errors)
-    const token = getAuthToken();
-    if (!token) return;
+    // 1. EARLY EXIT: Prevent running on landing page
+    let token = null;
+    if (typeof getAuthToken === 'function') {
+        token = getAuthToken();
+    } else if (typeof AppState !== 'undefined') {
+        token = AppState.token;
+    }
+    token = token || localStorage.getItem('cc_auth_token') || sessionStorage.getItem('token');
+    
+    if (!token) return; // Stop immediately if logged out
 
     const badge = document.getElementById('bell-count-badge');
     const itemsList = document.getElementById('notification-items-list');
 
+    // 2. ABSOLUTE GUARANTEE: These default to 0 and empty array so they can NEVER be undefined
     let unreadCount = 0;
     let list = [];
 
-    // 2. Use silent: true so background polls never trigger red error toasts
     try {
+        // 3. Fetch notifications silently
         const data = await executeSecureAPIRequest('/profile/notifications', { method: 'GET', silent: true });
-        list = data.notifications || data.data || (Array.isArray(data) ? data : []);
-        unreadCount = list.length;
+        
+        // 4. Extract array safely to prevent undefined lengths
+        if (data && Array.isArray(data.notifications)) {
+            list = data.notifications;
+        } else if (data && Array.isArray(data.data)) {
+            list = data.data;
+        } else if (Array.isArray(data)) {
+            list = data;
+        }
+        
+        unreadCount = list.length || 0;
     } catch (err) {
         console.warn("Notification sync fallback active");
+        unreadCount = 0; // Double safety fallback
+        list = [];       // Double safety fallback
     }
 
+    // 5. Update Badge (Forces absolute integer conversion to block 'undefined' strings)
     if (badge) {
-        badge.textContent = String(unreadCount);
-        if (unreadCount > 0) {
+        const countNumber = parseInt(unreadCount) || 0;
+        badge.textContent = countNumber.toString();
+        
+        if (countNumber > 0) {
             badge.classList.remove('hidden');
             badge.style.setProperty('display', 'flex', 'important');
         } else {
@@ -1426,18 +1451,23 @@ async function fetchAndRenderNotifications() {
         }
     }
 
+    // 6. Update Dropdown List Safely
     if (itemsList) {
-        if (unreadCount > 0) {
-            itemsList.innerHTML = list.map(item => `
-                <div class="notification-item" style="padding: 10px 14px; border-bottom: 1px solid var(--border-glass);">
-                    <div style="font-weight: 700; font-size: 0.88rem; color: var(--primary-core);">
-                        ${item.title || item.type || 'System Alert'}
+        if (list.length > 0) {
+            itemsList.innerHTML = list.map(item => {
+                const title = item.title || item.type || 'System Alert';
+                const message = item.message || item.content || 'Medical record updated.';
+                return `
+                    <div class="notification-item" style="padding: 10px 14px; border-bottom: 1px solid var(--border-glass);">
+                        <div style="font-weight: 700; font-size: 0.88rem; color: var(--primary-core);">
+                            ${title}
+                        </div>
+                        <div style="font-size: 0.85rem; color: var(--color-text-secondary); margin-top: 4px;">
+                            ${message}
+                        </div>
                     </div>
-                    <div style="font-size: 0.85rem; color: var(--color-text-secondary); margin-top: 4px;">
-                        ${item.message || item.content || 'Medical record updated.'}
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         } else {
             itemsList.innerHTML = `<div style="padding: 15px; text-align: center; color: var(--color-text-secondary); font-size: 0.85rem;">No active notifications pending.</div>`;
         }
