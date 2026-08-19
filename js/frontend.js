@@ -271,35 +271,60 @@ function toggleThemeMode() {
 /* --------------------------------------------------------------------------
    3. CLIENT ASYNC REQUEST TRANSMISSION & RESPONSE WRAPPERS
    -------------------------------------------------------------------------- */
+// ============================================================
+// BULLETPROOF API ENGINE WITH GUARANTEED SPINNER SHUTOFF
+// ============================================================
 async function executeSecureAPIRequest(endpoint, options = {}) {
-    // Only show loading spinner for non-silent (user-initiated) requests
-    if (!options.silent) setLoadingState(true);
+    const isSilent = options.silent === true;
 
-    const url = `${API_BASE_URL}${endpoint}`;
-
-    options.headers = options.headers || {};
-    const token = getAuthToken(); // Uses our unified token helper
-    if (token) {
-        options.headers['Authorization'] = `Bearer ${token}`;
-    }
+    // 1. Show the loading spinner
+    if (!isSilent) setLoadingState(true);
 
     try {
+        const url = `${API_BASE_URL}${endpoint}`;
+        options.headers = options.headers || {};
+
+        // 2. Inline token extraction guarantees it NEVER throws a ReferenceError
+        let token = null;
+        if (typeof getAuthToken === 'function') {
+            token = getAuthToken();
+        } else if (typeof AppState !== 'undefined') {
+            token = AppState.token || localStorage.getItem('cc_auth_token') || sessionStorage.getItem('token');
+        } else {
+            token = localStorage.getItem('cc_auth_token');
+        }
+
+        if (token) {
+            options.headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        // 3. Execute the fetch to the backend
         const response = await fetch(url, options);
+
+        // 4. Safely check if Render is sleeping/returning an HTML 502 Bad Gateway page
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("text/html")) {
+            throw new Error("Cloud server is waking up. Please wait 30 seconds and try again.");
+        }
+
         const data = await response.json();
-        if (!options.silent) setLoadingState(false);
 
         if (!response.ok) {
-            throw new Error(data.message || `HTTP Execution Collision Error: Code ${response.status}`);
+            throw new Error(data.message || `System Error: Code ${response.status}`);
         }
-        return data;
-    } catch (err) {
-        if (!options.silent) setLoadingState(false);
 
-        // 💡 SILENT FLAG: Only flash the red toast if this wasn't a background polling task
-        if (!options.silent) {
-            showToast(err.message, 'danger');
+        return data;
+
+    } catch (err) {
+        // 5. Catch ANY error (network offline, server sleep, JS crash) and show toast
+        if (!isSilent) {
+            showToast(err.message || "Network connection failed.", 'danger');
         }
         throw err;
+
+    } finally {
+        // 6. ULTIMATE GUARANTEE: The spinner WILL turn off, no matter what happened above.
+        if (!isSilent) setLoadingState(false);
     }
 }
 function setLoadingState(isLoading) {
