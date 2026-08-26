@@ -442,9 +442,8 @@ app.post('/api/appointments/book', authenticateBearerToken, restrictToRoles('Pat
         const [patientData] = await dbPool.execute('SELECT patient_id FROM patients WHERE user_id = ?', [req.userContext.userId]);
         const patientId = patientData[0].patient_id;
 
-        // Concurrency mapping validation: double booking blocker rule enforcement
         const [collisionCheck] = await dbPool.execute(
-            'SELECT appointment_id FROM appointments WHERE doctor_id = ? AND appointment_date = ? AND schedule_id = ? AND status NOT IN ("Cancelled")',
+            'SELECT appointment_id FROM appointments WHERE doctor_id = ? AND appointment_date = ? AND schedule_id = ? AND status != "COMPLETED"',
             [doctor_id, appointment_date, schedule_id]
         );
 
