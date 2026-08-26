@@ -739,19 +739,18 @@ app.post('/api/doctor/triage', async (req, res) => {
 
         const apptId = apptRows[0].appointment_id;
 
-        // 3. Commit the clinical metrics to medicalrecords (PATIENT_ID REMOVED!)
-        try {
-            await dbPool.execute(
-                'INSERT INTO medicalrecords (appointment_id, clinical_notes, body_temperature, bp_mmHg, heart_rate_bpm) VALUES (?, ?, ?, ?, ?)',
-                [apptId, notes || structuredSummary, temperature, blood_pressure, pulse_rate]
-            );
-        } catch (err) {
-            // Ultimate fallback for different column names
-            await dbPool.execute(
-                'INSERT INTO medicalrecords (appointment_id, treatment_notes, temperature, blood_pressure, pulse_rate) VALUES (?, ?, ?, ?, ?)',
-                [apptId, notes || structuredSummary, temperature, blood_pressure, pulse_rate]
-            );
-        }
+        // 3. Commit the clinical metrics to medicalrecords (Enterprise Structured Data)
+        await dbPool.execute(
+            'INSERT INTO medicalrecords (appointment_id, diagnosis, treatment_notes, record_date, bp_mmHg, temperature, pulse_rate) VALUES (?, ?, ?, CURDATE(), ?, ?, ?)',
+            [
+                apptId,
+                'Triage Assessment - Pending Diagnosis',
+                notes || 'Clinical vitals logged successfully.',
+                blood_pressure,
+                temperature,
+                pulse_rate
+            ]
+        );
 
         // 4. Update status to COMPLETED (Avoids the 'TRIAGED' ENUM database crash!)
         await dbPool.execute('UPDATE appointments SET status = "COMPLETED" WHERE appointment_id = ?', [apptId]);
