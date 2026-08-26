@@ -2245,3 +2245,19 @@ section.hidden,
     padding: 0 !important;
     pointer-events: none !important;
 }
+
+@media print {
+
+    /* Hides the sidebar, header, and buttons when printing */
+    .sidebar,
+    header,
+    .btn {
+        display: none !important;
+    }
+
+    /* Forces the background to be white and text to be black for paper */
+    body {
+        background-color: white !important;
+        color: black !important;
+    }
+}

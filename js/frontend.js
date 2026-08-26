@@ -1658,16 +1658,12 @@ async function loadPatientTreatmentCharts() {
                         <span style="font-size: 0.85rem; color: var(--color-text-secondary);">${notes || 'No clinical notes added.'}</span>
                     </div>
 
-                    ${medication ? `
-                        <div style="background: var(--success-light); border: 1px solid rgba(22, 163, 74, 0.2); padding: 10px 14px; border-radius: 8px; color: var(--success-core); font-size: 0.85rem; margin-bottom: 12px;">
-                            <strong>Active Prescription:</strong> ${medication} ${dosage ? '— ' + dosage : ''} ${instructions ? '(' + instructions + ')' : ''}
+                     ${medication ? `
+                        <div style="background: var(--success-light); border: 1px solid rgba(22, 163, 74, 0.2); padding: 10px 14px;">
+                            <strong>Active Prescription:</strong> ${medication} ${dosage ? '- ' + dosage : ''} ${instructions ? '(' + instructions + ')' : ''}
                         </div>
-                    ` : `
-                        <div style="background: var(--bg-main); border: 1px solid var(--border-glass); padding: 10px 14px; border-radius: 8px; color: var(--color-text-secondary); font-size: 0.85rem; margin-bottom: 12px;">
-                            <strong>Active Prescription:</strong> None prescribed for this encounter.
-                        </div>
-                    `}
-
+                    ` : ''}
+                    
                     <button class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="window.print()">
                         <i class="fa-solid fa-download"></i> Print Diagnostics Report Sheet
                     </button>
