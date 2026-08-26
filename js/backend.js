@@ -726,64 +726,42 @@ app.post('/api/doctor/triage', async (req, res) => {
         }
 
         const patientId = patientRows[0].patient_id;
-        const structuredSummary = `[TRIAGE LOG] BP: ${blood_pressure} | Temp: ${temperature}°C | Pulse: ${pulse_rate} BPM. Notes: ${notes}`;
+        const structuredSummary = `[TRIAGE LOG] BP: ${blood_pressure} | Temp: ${temperature}°C | Pulse: ${pulse_rate}`;
 
-        // 2. Commit the clinical metrics payload safely to the medicalrecords table first
+        // 2. Fetch the patient's most recent appointment so we can link the medical record safely
+        const [apptRows] = await dbPool.execute(
+            'SELECT appointment_id FROM appointments WHERE patient_id = ? ORDER BY appointment_date DESC LIMIT 1',
+            [patientId]
+        );
+
+        if (apptRows.length === 0) {
+            return res.status(400).json({ success: false, message: 'No active appointment found for this patient to attach vitals.' });
+        }
+
+        const apptId = apptRows[0].appointment_id;
+
+        // 3. Commit the clinical metrics to medicalrecords (PATIENT_ID REMOVED!)
         try {
             await dbPool.execute(
-                'INSERT INTO medicalrecords (patient_id, description) VALUES (?, ?)',
-                [patientId, structuredSummary]
+                'INSERT INTO medicalrecords (appointment_id, clinical_notes, body_temperature, bp_mmHg, heart_rate_bpm) VALUES (?, ?, ?, ?, ?)',
+                [apptId, notes || structuredSummary, temperature, blood_pressure, pulse_rate]
             );
-        } catch (recordError) {
-            try {
-                // Alternate schema fallback variation match
-                await dbPool.execute(
-                    'INSERT INTO medicalrecords (patient_id, notes) VALUES (?, ?)',
-                    [patientId, structuredSummary]
-                );
-            } catch (fallbackError) {
-                console.warn("Medical records table column mismatch bypassed. Vitals logged to stdout.", fallbackError.message);
-            }
+        } catch (err) {
+            // Ultimate fallback for different column names
+            await dbPool.execute(
+                'INSERT INTO medicalrecords (appointment_id, treatment_notes, temperature, blood_pressure, pulse_rate) VALUES (?, ?, ?, ?, ?)',
+                [apptId, notes || structuredSummary, temperature, blood_pressure, pulse_rate]
+            );
         }
 
-        // 3. DEFENSIVE STATUS ENGINE: Attempts status updates without breaking the pipeline on ENUM rejections
-        let finalStatusWord = 'CHECKED IN';
-        try {
-            const primaryUpdateQuery = `
-                UPDATE appointments 
-                SET status = 'TRIAGED' 
-                WHERE patient_id = ? AND status = 'CHECKED IN'
-                ORDER BY appointment_id DESC LIMIT 1
-            `;
-            await dbPool.execute(primaryUpdateQuery, [patientId]);
-            finalStatusWord = 'TRIAGED';
-        } catch (statusError) {
-            console.warn("Database rejected 'TRIAGED' value due to strict ENUM constraints. Testing alternative fallback...");
+        // 4. Update status to COMPLETED (Avoids the 'TRIAGED' ENUM database crash!)
+        await dbPool.execute('UPDATE appointments SET status = "COMPLETED" WHERE appointment_id = ?', [apptId]);
 
-            try {
-                // Attempt standard alternative state value assignment 
-                const fallbackUpdateQuery = `
-                    UPDATE appointments 
-                    SET status = 'COMPLETED' 
-                    WHERE patient_id = ? AND status = 'CHECKED IN'
-                    ORDER BY appointment_id DESC LIMIT 1
-                `;
-                await dbPool.execute(fallbackUpdateQuery, [patientId]);
-                finalStatusWord = 'COMPLETED';
-            } catch (fallbackStatusError) {
-                console.warn("Database schema rejected all state updates. Retaining original 'CHECKED IN' flag safely.");
-            }
-        }
-
-        return res.status(200).json({
-            success: true,
-            message: 'Vitals logged cleanly.',
-            applied_status: finalStatusWord
-        });
+        return res.json({ success: true, message: 'Clinical triage updates recorded successfully.' });
 
     } catch (error) {
-        console.error('Critical failure during triage ingestion execution trace:', error);
-        return res.status(500).json({ success: false, message: 'Internal diagnostic tracking server pipeline fault.' });
+        console.error("Triage commit failed:", error.message);
+        return res.status(500).json({ success: false, message: 'System failed to commit triage records.' });
     }
 });
 // --- CATEGORY D: ADMINISTRATIVE SCHEDULING CONTROLS ---

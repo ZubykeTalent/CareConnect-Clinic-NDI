@@ -1407,7 +1407,7 @@ async function fetchAndRenderNotifications() {
         token = AppState.token;
     }
     token = token || localStorage.getItem('cc_auth_token') || sessionStorage.getItem('token');
-    
+
     if (!token) return; // Stop immediately if logged out
 
     const badge = document.getElementById('bell-count-badge');
@@ -1420,7 +1420,7 @@ async function fetchAndRenderNotifications() {
     try {
         // 3. Fetch notifications silently
         const data = await executeSecureAPIRequest('/profile/notifications', { method: 'GET', silent: true });
-        
+
         // 4. Extract array safely to prevent undefined lengths
         if (data && Array.isArray(data.notifications)) {
             list = data.notifications;
@@ -1429,7 +1429,7 @@ async function fetchAndRenderNotifications() {
         } else if (Array.isArray(data)) {
             list = data;
         }
-        
+
         unreadCount = list.length || 0;
     } catch (err) {
         console.warn("Notification sync fallback active");
@@ -1441,7 +1441,7 @@ async function fetchAndRenderNotifications() {
     if (badge) {
         const countNumber = parseInt(unreadCount) || 0;
         badge.textContent = countNumber.toString();
-        
+
         if (countNumber > 0) {
             badge.classList.remove('hidden');
             badge.style.setProperty('display', 'flex', 'important');
