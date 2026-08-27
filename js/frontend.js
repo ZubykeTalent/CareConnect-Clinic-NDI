@@ -472,8 +472,13 @@ function launchApplicationDashboard() {
     document.getElementById('sidebar-username').innerText = AppState.user.full_name || "System Executive Manager";
     document.getElementById('sidebar-user-sub').innerText = AppState.user.email;
 
-    if (AppState.user.profile_photo_url) {
-        document.getElementById('sidebar-avatar').src = `${API_BASE_URL.replace('/api', '')}/${AppState.user.profile_photo_url}`;
+    const avatarContainer = document.getElementById('sidebar-avatar');
+    const userName = AppState.user.full_name || "User";
+
+    if (AppState.user.profile_photo_url && AppState.user.profile_photo_url.trim() !== "") {
+        avatarContainer.innerHTML = `<img src="${API_BASE_URL.replace('/api', '')}/${AppState.user.profile_photo_url}" style="width: 100%; height: 100%; object-fit: cover;">`;
+    } else {
+        avatarContainer.innerHTML = userName.charAt(0).toUpperCase();
     }
 
     buildRoleSpecificSidebarNavigation();
@@ -1020,6 +1025,16 @@ async function handleProfileUpdateSubmission(e) {
         showToast('Identity profile modifications committed securely.');
         AppState.user = data.user;
         document.getElementById('sidebar-username').innerText = AppState.user.full_name;
+        // Update the sidebar avatar (Image if exists, or Uppercase Initials fallback)
+        const avatarContainer = document.getElementById('sidebar-avatar');
+        if (avatarContainer) {
+            const userName = AppState.user.full_name || "User";
+            if (AppState.user.profile_photo_url && AppState.user.profile_photo_url.trim() !== "") {
+                avatarContainer.innerHTML = `<img src="${API_BASE_URL.replace('/api', '')}/${AppState.user.profile_photo_url}" style="width: 100%; height: 100%; object-fit: cover;">`;
+            } else {
+                avatarContainer.innerHTML = userName.split(' ').map(n => n[0]).join('').toUpperCase();
+            }
+        }
     } catch (err) { }
 }
 
@@ -1038,7 +1053,8 @@ async function fetchDashboardSystemNotifications() {
             return;
         }
 
-        badge.innerText = notifications.length;
+        // This forces it to show 0 instead of "undefined" if the data isn't an array yet
+        badge.innerText = (notifications && notifications.length) ? notifications.length : 0;
         badge.classList.remove('hidden');
 
         list.innerHTML = notifications.map(n => `
