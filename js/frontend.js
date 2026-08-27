@@ -1663,13 +1663,19 @@ async function loadPatientTreatmentCharts() {
                             <strong>Active Prescription:</strong> ${medication} ${dosage ? '- ' + dosage : ''} ${instructions ? '(' + instructions + ')' : ''}
                         </div>
                     ` : ''}
-                    
-                    <button class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="window.print()">
+
+                    <button class="btn btn-outline print-trigger-btn" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">
                         <i class="fa-solid fa-download"></i> Print Diagnostics Report Sheet
                     </button>
                 </div>
             `;
         }).join('');
+        // Attach the print function to all buttons with the new class
+        document.querySelectorAll('.print-trigger-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                window.print();
+            });
+        });
 
     } catch (err) {
         container.innerHTML = `
