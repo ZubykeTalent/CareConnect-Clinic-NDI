@@ -1240,8 +1240,8 @@ document.addEventListener('click', async (event) => {
         alert(`\u2705 Appointment allocation updated to: ${targetStatus}`);
 
         // Refresh the administrative grid layout dynamically or fallback to reload
-        if (typeof fetchPatientDashboardMetricsAndSchedules === 'function') {
-            await fetchPatientDashboardMetricsAndSchedules();
+        if (typeof fetchAdministrativeMasterAppointmentScheduleGrid === 'function') {
+            await fetchAdministrativeMasterAppointmentScheduleGrid();
         } else {
             window.location.reload();
         }
