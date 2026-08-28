@@ -181,7 +181,7 @@ function initDOMListeners() {
                                 <th style="padding: 12px;">Biological DOB</th>
                                 <th style="padding: 12px;">Contact Info</th>
                                 <th style="padding: 12px;">Residential Address</th>
-                                <th style="padding: 12px;">Emergency Contact</th>
+                                <th style="padding: 8px; line-height: 1.2;">Emergency<br>Contact</th>
                                 <th style="padding: 12px;">Medical History Context</th>
                             </tr>
                         </thead>
@@ -204,7 +204,7 @@ function initDOMListeners() {
                             <div style="font-size: 0.85em; opacity: 0.8;">${item.phone || 'N/A'}</div>
                         </td>
                         <td style="padding: 12px; max-width: 200px; word-wrap: break-word;">${item.address || 'N/A'}</td>
-                        <td style="padding: 12px; font-weight: 500; color: var(--primary-core);">${item.emergency_contact || 'None Provided'}</td>
+                        <td style="padding: 8px; font-size: 0.9em; max-width: 140px; word-wrap: break-word;">${item.emergency_contact || 'N/A'}</td>
                         <td style="padding: 12px; max-width: 300px; word-wrap: break-word; line-height: 1.4;">
                             ${item.medical_history_summary || 'None'}
                         </td>

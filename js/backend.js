@@ -839,7 +839,7 @@ app.get('/api/profile/me', authenticateBearerToken, async (req, res) => {
     try {
         let sql = 'SELECT user_id, email, role_id FROM users WHERE user_id = ?';
         if (req.userContext.role === 'Patient') {
-            sql = 'SELECT u.user_id, u.email, p.full_name, p.phone, p.address, p.medical_history_summary, p.profile_photo_url FROM users u LEFT JOIN patients p ON u.user_id = p.user_id WHERE u.user_id = ?';
+            sql = 'SELECT u.user_id, u.email, p.full_name, p.phone, p.address, p.emergency_contact, p.medical_history_summary, p.profile_photo_url FROM users u LEFT JOIN patients p ON u.user_id = p.user_id WHERE u.user_id = ?';
         } else if (req.userContext.role === 'Doctor') {
             sql = 'SELECT u.user_id, u.email, d.full_name, d.phone, d.specialization FROM users u INNER JOIN doctors d ON u.user_id = d.user_id WHERE u.user_id = ?';
         }
