@@ -176,13 +176,13 @@ function initDOMListeners() {
                     <table class="table" style="width: 100%; border-collapse: collapse; text-align: left; color: inherit; min-width: 900px;">
                         <thead>
                             <tr style="border-bottom: 2px solid rgba(128, 128, 128, 0.3);">
-                                <th style="padding: 12px;">ID</th>
-                                <th style="padding: 12px;">Patient Identity</th>
-                                <th style="padding: 12px;">Biological DOB</th>
-                                <th style="padding: 12px;">Contact Info</th>
-                                <th style="padding: 12px;">Residential Address</th>
-                                <th style="padding: 8px; line-height: 1.2;">Emergency<br>Contact</th>
-                                <th style="padding: 12px;">Medical History Context</th>
+                                <th style="padding: 10px;">ID</th>
+                                <th style="padding: 10px;">Patient Identity</th>
+                                <th style="padding: 10px;">Biological DOB</th>
+                                <th style="padding: 10px;">Contact Info</th>
+                                <th style="padding: 10px;">Residential Address</th>
+                                <th style="padding: 10px; line-height: 1.2;">Emergency<br>Contact</th>
+                                <th style="padding: 10px;">Medical History Context</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -193,19 +193,19 @@ function initDOMListeners() {
 
                     dataGridHTML += `
                     <tr style="border-bottom: 1px solid rgba(128, 128, 128, 0.15); color: inherit; vertical-align: top;">
-                        <td style="padding: 12px;">${item.patient_id}</td>
-                        <td style="padding: 12px;">
+                        <td style="padding: 10px;">${item.patient_id}</td>
+                        <td style="padding: 10px;">
                             <strong>${item.full_name}</strong><br>
                             <small style="opacity: 0.7;">${item.gender || 'N/A'}</small>
                         </td>
-                        <td style="padding: 12px;">${formattedDOB}</td>
-                        <td style="padding: 12px;">
+                        <td style="padding: 10px;">${formattedDOB}</td>
+                        <td style="padding: 10px;">
                             <div>${item.email}</div>
                             <div style="font-size: 0.85em; opacity: 0.8;">${item.phone || 'N/A'}</div>
                         </td>
-                        <td style="padding: 12px; max-width: 200px; word-wrap: break-word;">${item.address || 'N/A'}</td>
-                        <td style="padding: 8px; font-size: 0.9em; max-width: 140px; word-wrap: break-word;">${item.emergency_contact || 'N/A'}</td>
-                        <td style="padding: 12px; max-width: 300px; word-wrap: break-word; line-height: 1.4;">
+                        <td style="padding: 10px; max-width: 200px; word-wrap: break-word;">${item.address || 'N/A'}</td>
+                        <td style="padding: 10px; font-size: 0.9em; max-width: 140px; word-wrap: break-word;">${item.emergency_contact || 'N/A'}</td>
+                        <td style="padding: 10px; max-width: 300px; word-wrap: break-word; line-height: 1.4;">
                             ${item.medical_history_summary || 'None'}
                         </td>
                     </tr>
