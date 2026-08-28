@@ -203,8 +203,8 @@ function initDOMListeners() {
                             <div>${item.email}</div>
                             <div style="font-size: 0.85em; opacity: 0.8;">${item.phone || 'N/A'}</div>
                         </td>
-                        <td style="padding: 12px; font-weight: 500; color: var(--primary-core);">${item.emergency_contact || 'None Provided'}</td>
                         <td style="padding: 12px; max-width: 200px; word-wrap: break-word;">${item.address || 'N/A'}</td>
+                        <td style="padding: 12px; font-weight: 500; color: var(--primary-core);">${item.emergency_contact || 'None Provided'}</td>
                         <td style="padding: 12px; max-width: 300px; word-wrap: break-word; line-height: 1.4;">
                             ${item.medical_history_summary || 'None'}
                         </td>
