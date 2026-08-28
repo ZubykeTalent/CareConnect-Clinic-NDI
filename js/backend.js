@@ -823,8 +823,7 @@ app.get('/api/manager/reports', authenticateBearerToken, restrictToRoles('Clinic
 // Endpoint to pull complete profiles for the manager dashboard view
 app.get('/api/admin/patients', async (req, res) => {
     // Added dob, address, emergency_contact_name, emergency_contact_phone, and medical_history columns
-    const sqlQuery = 'SELECT patient_id, full_name, email, phone, gender, dob, address, medical_history_summary FROM patients ORDER BY patient_id DESC';
-
+    const sqlQuery = 'SELECT patient_id, full_name, email, phone, gender, dob, address, emergency_contact, medical_history_summary FROM patients ORDER BY patient_id DESC';
     try {
         const [dataset] = await dbPool.execute(sqlQuery);
         res.json(dataset);
