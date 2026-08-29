@@ -398,6 +398,10 @@ async function handleRegistrationSubmission(event) {
     const genderInput = document.getElementById('reg-gender') || document.getElementById('reg-gender-select') || form.querySelector('select');
     const dobInput = document.getElementById('reg-dob') || document.getElementById('dob') || form.querySelector('input[type="date"]');
     const addressInput = document.getElementById('reg-address') || document.getElementById('address');
+    const emergencyContactInput =
+    document.getElementById('reg-emergency') ||
+    document.getElementById('emergency_contact') ||
+    document.getElementById('emergencyContact');
     const historyInput = form.querySelector('textarea') || document.getElementById('medical-history');
 
     // Build the payload data object
@@ -409,6 +413,7 @@ async function handleRegistrationSubmission(event) {
         gender: genderInput ? genderInput.value : '',
         dob: dobInput ? dobInput.value : '',
         address: addressInput ? addressInput.value.trim() : '',
+        emergency_contact: emergencyContactInput ? emergencyContactInput.value.trim() : '',    
         medical_history_summary: historyInput ? historyInput.value.trim() : ''
     };
 
